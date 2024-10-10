@@ -11,11 +11,11 @@ execute:
 
 # 1. Abstract
 
-In this R Shiny application, we analyze the rental prices of **flats** in Singapore using **Geographically Weighted Regression (GWR)**. This analysis aims to predict and examine the spatial dynamics of rental prices, primarily focusing on the influence of factors such as proximity to transportation hubs (MRTs and Bus Stations). By examining how predictors like access to public transport and neighborhood characteristics affect rental prices across various towns, we hope to facilitate more informed decision-making in the context of Singapore's unique urban landscape. This application will provide a visual representation of rental price dynamics and serve as a valuable tool for individuals considering where to rent a flat.
+In this R Shiny application, we analyze the rental prices of **flats** in Singapore using **Geographically Weighted Regression (GWR)**. This analysis aims to predict and examine the spatial dynamics of rental prices, primarily focusing on the influence of factors such as proximity to transportation hubs. By examining how predictors like access to public transportation and neighborhood characteristics affect rental prices across various towns, we hope to facilitate more informed decision-making in the context of Singapore's unique urban landscape. This application will provide a visual representation of rental price dynamics and serve as a valuable tool for individuals considering where to rent a flat.
 
 # 2. Motivation
 
-Following the recent breakdowns in the East-West line and other MRT services in Singapore, there has been a renewed focus on the essential role of transportation accessibility of housing. This situation, combined with the rising influx of expats seeking rental housing, has intensified competition for well-located flats. As access to reliable public transport becomes a pivotal factor for potential renters, understanding its influence on rental prices is more critical than ever.
+Recent MRT service breakdowns in Singapore have highlighted the importance of transportation accessibility for housing. This situation, combined with the rising influx of expats seeking rental housing, has intensified competition for well-located flats. As access to reliable public transport becomes a pivotal factor for potential renters, understanding its influence on rental prices is more critical than ever.
 
 With this project, we aim to provide individuals looking to rent a flat with a better understanding of how transportation accessibility and other local factors affect rental prices. By leveraging Geographically Weighted Regression (GWR), our analysis will help prospective renters make informed decisions, ultimately improving their housing choices in Singapore's dynamic urban landscape.
 
@@ -41,10 +41,26 @@ The project aims to deliver a Shiny app that provides:
 
     -   **Other Potential Variables**: Distance to amenities, proximity to business districts, and neighborhood characteristics.
 
-2.  Conduct thorough **EDA** to understand the dataset’s structure, distributions, and potential relationships between variables.
+2.  Conduct **EDA** to understand the dataset’s structure, distributions, and potential relationships between variables.
 
 3.  Develop a **Geographically Weighted Regression (GWR)** model to account for spatial variability in relationships between rental prices and influencing factors.
 
 4.  Implement **Geographically Weighted Predictive Models** to allow users to input location-based data and obtain predicted rental prices.
 
 # 5. Main Features
+
+## 5.1 Exploratory Data Analysis
+
+![](images/EDA-02.png)
+
+## 5.2 Geographically Weighted Regression
+
+![](images/GWR-01.png)
+
+## 5.3 Geospatial Analysis
+
+![](images/Geospatial Analysis-01.png)
+
+## 5.4 Data Table
+
+![](images/Data Table.png)
