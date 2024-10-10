@@ -45,6 +45,6 @@ The project aims to deliver a Shiny app that provides:
 
 3.  Develop a **Geographically Weighted Regression (GWR)** model to account for spatial variability in relationships between rental prices and influencing factors.
 
-Implement **Geographically Weighted Predictive Models** to allow users to input location-based data and obtain predicted rental prices.
+4.  Implement **Geographically Weighted Predictive Models** to allow users to input location-based data and obtain predicted rental prices.
 
 # 5. Main Features
