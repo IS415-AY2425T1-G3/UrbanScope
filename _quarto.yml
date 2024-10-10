@@ -5,8 +5,10 @@ website:
   title: "UrbanScope"
   navbar:
     left:
-      - href: index.qmd
-        text: Home
+    - text: "Project Proposal"
+      href: "Proposal/proposal.qmd"
+      
+    right:
       - about.qmd
 
 format:
