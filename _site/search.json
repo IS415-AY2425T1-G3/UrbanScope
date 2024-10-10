@@ -1,10 +1,10 @@
 [
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
+    "objectID": "Proposal/proposal.html",
+    "href": "Proposal/proposal.html",
+    "title": "Project Proposal",
     "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
+    "text": "1. Abstract\nIn this R Shiny application, we analyze the rental prices of flats in Singapore using Geographically Weighted Regression (GWR). This analysis aims to predict and examine the spatial dynamics of rental prices, primarily focusing on the influence of factors such as proximity to transportation hubs (MRTs and Bus Stations). By examining how predictors like access to public transport and neighborhood characteristics affect rental prices across various towns, we hope to facilitate more informed decision-making in the context of Singapore’s unique urban landscape. This application will provide a visual representation of rental price dynamics and serve as a valuable tool for individuals considering where to rent a flat.\n\n\n2. Motivation\nFollowing the recent breakdowns in the East-West line and other MRT services in Singapore, there has been a renewed focus on the essential role of transportation accessibility of housing. This situation, combined with the rising influx of expats seeking rental housing, has intensified competition for well-located flats. As access to reliable public transport becomes a pivotal factor for potential renters, understanding its influence on rental prices is more critical than ever.\nWith this project, we aim to provide individuals looking to rent a flat with a better understanding of how transportation accessibility and other local factors affect rental prices. By leveraging Geographically Weighted Regression (GWR), our analysis will help prospective renters make informed decisions, ultimately improving their housing choices in Singapore’s dynamic urban landscape.\n\n\n3. Project Objectives\nThe project aims to deliver a Shiny app that provides:\n\nInteractive UI design.\nExploratory Data Analysis (EDA)\nGeographically Weighted Regression (GWR) Models using different models, such as Hedonic Pricing model, Linear Regression with Spatial lag etc.\nPredicting Rental Prices with GWR by entering the location.\n\n\n\n\n4. Proposed Scope and Methodology\n\nDataset Preparation\n\nRental Price Data: Include details such as rental price, property type, and property size.\nPublic Transport Data: Geospatial data of MRT station locations and bus stop locations.\nOther Potential Variables: Distance to amenities, proximity to business districts, and neighborhood characteristics.\n\nConduct thorough EDA to understand the dataset’s structure, distributions, and potential relationships between variables.\nDevelop a Geographically Weighted Regression (GWR) model to account for spatial variability in relationships between rental prices and influencing factors.\n\nImplement Geographically Weighted Predictive Models to allow users to input location-based data and obtain predicted rental prices.\n\n\n5. Main Features"
   },
   {
     "objectID": "index.html",
@@ -12,5 +12,12 @@
     "title": "UrbanScope",
     "section": "",
     "text": "This is a Quarto website.\nTo learn more about Quarto websites visit https://quarto.org/docs/websites.\n\n1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
   }
 ]
