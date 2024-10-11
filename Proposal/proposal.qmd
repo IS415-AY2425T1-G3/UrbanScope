@@ -57,10 +57,6 @@ The project aims to deliver a Shiny app that provides:
 
 ![](images/GWR-01.png)
 
-## 5.3 Geospatial Analysis
+## 5.3 Data Table
 
-![](images/Geospatial Analysis-01.png)
-
-## 5.4 Data Table
-
-![](images/Data Table.png)
+![](images/Data%20Table.png)
