@@ -2,10 +2,18 @@
 title: "UrbanScope"
 ---
 
-This is a Quarto website.
+# Welcome to UrbanScope’s Rental Explorer!
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Built with the power of **Quarto**, hosted on **Netlify**, and driven by **R programming**, our interactive tool lets you explore the ever-changing landscape of Singapore’s rental market. Our cutting-edge tool combines the power of **Geographically Weighted Regression (GWR)** with interactive visuals, allowing you to explore how proximity to MRT stations, bus stops, and other key factors influence rental prices.
 
-```{r}
-1 + 1
-```
+### What Can You Do Here?
+
+-   **Interactive Experience**: Adjust inputs and watch the rental map of Singapore come alive with instant insights.
+-   **Explore Key Trends**: Dive deep into the impact of transportation access, neighborhood vibes, and property features on rental prices.
+-   **Get Accurate Predictions**: Enter any location and let our predictive model forecast the likely rental price based on surrounding amenities and transport links.
+
+------------------------------------------------------------------------
+
+Ready to make smarter rental decisions? Let’s get started!
+
+**UrbanScope** – Helping you navigate Singapore’s rental market like a pro.
