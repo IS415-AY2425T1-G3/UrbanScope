@@ -1,9 +1,20 @@
 ---
 title: "About"
 ---
+# Meet UrbanScope: Mapping Your Next Move
 
-About this site
+UrbanScope isn’t just another data project—it’s your personal guide to finding the perfect rental flat in Singapore. Born from our passion for solving real-world problems through data, we created this tool to help you make more informed rental choices. Why? Because we know that where you live should be more than just an address—it should be a strategic decision.
 
-```{r}
-1 + 1
-```
+### Who We Are:
+- **Pan Ming Wei**
+- **Georgia Ng**
+- **Brian Lim**
+
+### Why We Built This:
+In light of recent MRT disruptions, we saw a need to understand how public transport accessibility impacts housing prices. With Singapore’s rental market becoming more competitive, we wanted to create a tool that helps users make informed decisions by understanding the true value of location. 
+
+Whether you’re searching for a home near your office or looking for the best deal near an MRT station, UrbanScope helps you navigate the rental market with confidence.
+
+---
+
+UrbanScope: **Making sense of Singapore’s rental scene, one flat at a time.**
