@@ -16,10 +16,9 @@ mpsz_sf <- read_rds('data/rds/mpsz_grped_by_town.rds')
 ui <- navbarPage(
   title = "UrbanScope",
   fluid = TRUE,
-  theme = shinytheme("flatly"),
+  theme = shinytheme("united"),
   id = "navbarID",
-  navbarMenu("EDA", 
-             #==========================================================
+  navbarMenu("EDA", #==========================================================
              # Histogram
              #==========================================================
              # tabPanel("Histogram"),
@@ -48,15 +47,13 @@ ui <- navbarPage(
                        format(rental_sf$rent_approval_date, "%Y %b")
                      )),
                      selected = '2024 Jan to Sep'
-                   )  
+                   )
                  ),
-                 mainPanel(tmapOutput(
-                   "chloropleth", width = "100%", height = 580
-                 ),
-                 tags$div(style = "margin-top: 20px;"),  # Add a div with margin
-                 wellPanel(
-                   tableOutput("statistics")
-                 )
+                 mainPanel(
+                   tmapOutput("chloropleth", width = "100%", height = 580),
+                   tags$div(style = "margin-top: 20px;"),
+                   # Add a div with margin
+                   wellPanel(tableOutput("statistics"))
                  )
                )
              )),
