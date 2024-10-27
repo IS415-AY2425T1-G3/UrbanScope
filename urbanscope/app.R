@@ -9,19 +9,27 @@ pacman::p_load(
   corrplot,
   shinydashboard,
   shinythemes,
-  plotly
+  plotly,
+  shinycssloaders,
+  shinyjs,
+  shinyalert
 )
 
 rental_sf <- read_rds('data/rds/rental_sf.rds')
 mpsz_sf <- read_rds('data/rds/mpsz_grped_by_town.rds')
+gwr_model <- read_rds('data/rds/gwr_adaptive.rds')
 
 categorical_cols <- c("town", "rent_approval_date", "flat_type", "region")
+
+# Define a global variable to store GWR results
+gwr_global_result <- NULL
 
 #========================#
 ###### Shiny UI ######
 #========================#
 
 ui <- navbarPage(
+  useShinyjs(), # Use shinyjs packages
   title = "UrbanScope",
   fluid = TRUE,
   theme = shinytheme("united"),
@@ -192,8 +200,7 @@ ui <- navbarPage(
           inputId = "selected_columns",
           label = "Select Independent Columns",
           choices = colnames(rental_sf)[7:19],
-          # Update to the range of your independent columns
-          selected = colnames(rental_sf)[7:19]  # Default to all columns or any specific default
+          selected = colnames(rental_sf)[7:19]
         ),
       ),
       
@@ -202,23 +209,82 @@ ui <- navbarPage(
       )
     )
   ),
+  #==========================================================
+  # GWR
+  #==========================================================
   tabPanel("GWR", sidebarLayout(
     sidebarPanel(
       selectInput(
-        inputId = "map_type",
-        label = "Select Map Type",
+        inputId = "gwr_dependent_variable",
+        label = "Dependent Variable",
         choices = c(
-          "Average Rental Price" = "avg_price",
-          "Count of Rental Flats" = "count"
+          "Monthly Rent" = "monthly_rent"
         ),
-        selected = "avg_price"
+        selected = "CV"
       ),
-      tmapOutput("mapPlot", width = "100%", height = 580)
+      checkboxGroupInput(
+        inputId = "gwr_independent_variables",
+        label = "Select Independent Variables",
+        choices = colnames(rental_sf)[7:19],
+        selected = colnames(rental_sf)[7:19],
+        inline = FALSE 
+      ),
+      selectInput(
+        inputId = "gwr_approach",
+        label = "Bandwidth Approach",
+        choices = c(
+          "Cross-validation (CV)" = "CV",
+          "Akaike Information Criterion corrected (AICc)" = "AIC"
+        ),
+        selected = "CV"
+      ),
+      selectInput(
+        inputId = "gwr_adaptive",
+        label = "Type of Bandwidth",
+        choices = c(
+          "Adaptive" = "TRUE",
+          "Fixed" = "FALSE"
+        ),
+        selected = "TRUE"
+      ),
+      selectInput(
+        inputId = "gwr_kernel",
+        label = "Kernel",
+        choices = c(
+          "Gaussian" = "gaussian",
+          "Exponential" = "exponential",
+          "Bisquare" = "bisquare",
+          "Tricube" = "tricube",
+          "Boxcar" = "boxcar"
+        ),
+        selected = "gaussian"
+      ),
+      selectInput(
+        inputId = "gwr_longlat",
+        label = "Distance Measure",
+        choices = c(
+          "Great Circle Distance" = "TRUE",
+          "Euclidean Distance" = "FALSE"
+        ),
+        selected = "FALSE"
+      ),
+      actionButton(
+        inputId = "GWRSubmit",
+        label = "Submit",
+        style = "color: white; background-color: #007BFF; border-color: #007BFF"
+      )
     ),
-    mainPanel(tmapOutput(
-      "mapPlot", width = "100%", height = 580
+    mainPanel(tabsetPanel(
+      id = "gwr_tabs",
+      tabPanel("Model Info", value = "gwr_model_info_tab", withSpinner(verbatimTextOutput("gwr_model_info"))),
+      tabPanel("Local R2 Map", value = "gwr_local_r2_tab", withSpinner(
+        tmapOutput("gwr_local_r2_plot", width = "100%", height = 580)
+      ))
     ))
   )),
+  #==========================================================
+  # Predictive Model
+  #==========================================================
   tabPanel("Predictive Model", sidebarLayout(
     sidebarPanel(
       selectInput(
@@ -519,7 +585,119 @@ server <- function(input, output) {
   # GWR
   #==========================================================
   
+  loadLocalR2Tmap <- function(input_model) {
+    rental_sf_adaptive <- st_as_sf(input_model$SDF) %>%
+      st_transform(crs = 3414)
+    
+    gwr_adaptive_output <- as.data.frame(input_model$SDF)
+    
+    rental_sf_adaptive <- cbind(rental_sf, gwr_adaptive_output)
+    
+    # Create the tmap visualization
+    tm_shape(mpsz_sf) +
+      tmap_options(check.and.fix = TRUE) +
+      tm_polygons(alpha = 0.1) +
+      tm_shape(rental_sf_adaptive) +
+      tm_dots(col = "Local_R2",
+              border.col = "gray60",
+              border.lwd = 1) +
+      tm_view(set.zoom.limits = c(11, 14))
+  }
   
+  #=======================
+  # Based on User input
+  #=======================
+  gwrResult <- eventReactive(input$GWRSubmit, {
+    # Disable the button while processing
+    shinyjs::disable("GWRSubmit")  # Disable the button
+    shinyjs::runjs("$('#GWRSubmit').css('background-color', '#6c757d');")  # Change to gray
+    shinyjs::runjs("$('#GWRSubmit').css('border-color', '#6c757d');")  # Change border color
+    shinyjs::runjs("$('#GWRSubmit').text('Processing...');")  # Change text to 'Processing...'
+    # Create the formula based on selected variables
+    formula_input <- paste(
+      input$gwr_dependent_variable,
+      "~",
+      paste(input$gwr_independent_variables, collapse = " + ")
+    )
+    formula <- as.formula(formula_input)
+    # Run GWR with user-specified parameters
+    output <- gwr.basic(
+      formula = formula,
+      data = rental_sf,
+      bw = if (as.logical(input$gwr_adaptive)) 54 else 450,    # 54 is for adaptive, 450 for Fix
+      # Based on Take Home Ex 03 for Adaptive
+      kernel = input$gwr_kernel,
+      adaptive = as.logical(input$gwr_adaptive),
+      longlat = as.logical(input$gwr_longlat)
+    )
+    gwr_model <<- output # overwrite the gwr_model
+    return(output)
+  })
+  
+  # Function to update the GWR button and output
+  updateModelResult <- function(active_tab) {
+    if (active_tab == "gwr_model_info_tab") {
+      # Calculate the result and update the output
+      output$gwr_model_info <- renderText({
+        result <- paste(capture.output(gwrResult()), collapse = "\n")
+        shinyjs::enable("GWRSubmit")  # Re-enable the button after processing
+        # Change button color and text back to original
+        shinyjs::runjs("$('#GWRSubmit').css('background-color', '#007BFF');")  # Original color
+        shinyjs::runjs("$('#GWRSubmit').css('border-color', '#007BFF');")  # Original border color
+        shinyjs::runjs("$('#GWRSubmit').text('Submit');")  # Reset text to 'Submit'
+        return(result)
+      })
+      
+      
+    } else {
+      output$gwr_local_r2_plot <- renderTmap({
+        gwrResult()
+        loadLocalR2Tmap(gwr_model)
+        shinyjs::enable("GWRSubmit")  # Re-enable the button after processing
+        # Change button color and text back to original
+        shinyjs::runjs("$('#GWRSubmit').css('background-color', '#007BFF');")  # Original color
+        shinyjs::runjs("$('#GWRSubmit').css('border-color', '#007BFF');")  # Original border color
+        shinyjs::runjs("$('#GWRSubmit').text('Submit');")  # Reset text to 'Submit'
+      })
+  
+    }
+  }
+  
+  observeEvent(input$GWRSubmit, {
+    # Detect the active tab
+    active_tab <- input$gwr_tabs
+    shinyalert(
+      title = "Confirm Submission",
+      text = "Warning: The GWR model may take 4-5 minutes to process, and other pages will also be blocked during this time. Do you want to proceed?",
+      type = "warning",
+      showCancelButton = TRUE,
+      confirmButtonText = "Yes, proceed",
+      cancelButtonText = "No, cancel",
+      callbackR = function(confirm) {
+        if (confirm) {
+          updateModelResult(active_tab) # Method to process the model
+        }
+      }
+    )
+  })
+  
+  #=======================
+  # Observe GWR Tab change
+  #=======================
+  observeEvent(input$gwr_tabs, {
+    if (input$gwr_tabs == "gwr_model_info_tab") {
+      print("reloading model data for info")
+      output$gwr_model_info <- renderText({
+        result <-  paste(capture.output(gwr_model), collapse = "\n")
+        return(result)
+      })
+    }else {
+      output$gwr_local_r2_plot <- renderTmap({
+        print("reloading model data for r2 tmap")
+        loadLocalR2Tmap(gwr_model)
+      })
+    }
+  })
   
   
   
