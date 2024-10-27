@@ -105,7 +105,6 @@ ui <- navbarPage(
             inputId = "cm_hclust_method",
             label = "Hierarchical Clustering Method",
             choices = c(
-              "Ward's Method" = "ward",
               "Ward's Method (D)" = "ward.D",
               "Ward's Method (D2)" = "ward.D2",
               "Single Linkage" = "single",
@@ -118,13 +117,17 @@ ui <- navbarPage(
             selected = "ward"
           )
         ),
-        actionButton("CorrelationMatrixUpdate", "Update"),
-        tmapOutput("mapPlot", width = "100%", height = 580)
+        checkboxGroupInput(
+          inputId = "selected_columns",
+          label = "Select Independent Columns",
+          choices = colnames(rental_sf)[7:19],  # Update to the range of your independent columns
+          selected = colnames(rental_sf)[7:19]  # Default to all columns or any specific default
+        ),
       ),
       
-      mainPanel(tmapOutput(
-        "mapPlot", width = "100%", height = 580
-      ))
+      mainPanel(
+        plotOutput("correlationMatrixPlot", width = "100%", height = 580)
+      )
     )
   ),
   tabPanel("GWR", sidebarLayout(
@@ -157,7 +160,7 @@ ui <- navbarPage(
       ),
       tmapOutput("mapPlot", width = "100%", height = 580)
     ),
-    mainPanel(tmapOutput(
+    mainPanel(plotOutput(
       "mapPlot", width = "100%", height = 580
     ))
   )),
@@ -268,9 +271,55 @@ server <- function(input, output) {
   #==========================================================
   # Correlation Matrix
   #==========================================================
+
+  # Extract independent columns
+  independent_columns <- reactive({
+    req(input$selected_columns)  # Ensure at least one column is selected
+    rental_sf %>%
+      select(all_of(input$selected_columns)) %>%  # Use all_of to select based on user input
+      st_drop_geometry()
+  })
   
+  # Generate correlation matrix plot based on user inputs
+  correlationMatrixResults <- reactive({
+    # Calculate the correlation matrix
+    correlation_matrix <- cor(independent_columns(), use = "pairwise.complete.obs")
+    
+    # Set tl.pos based on cm_type
+    tl_pos <- switch(input$cm_type,
+                     "full" = "full",
+                     "upper" = "td",
+                     "lower" = "ld")
+    
+    if (input$cm_order == "hclust") {
+      corrplot(
+        correlation_matrix, 
+        diag = FALSE, 
+        order = input$cm_order, 
+        method = input$cm_method, 
+        type = input$cm_type,
+        hclust.method = input$cm_hclust_method,
+        tl.pos = tl_pos, 
+        tl.cex = 0.8
+      )
+    } else {
+      corrplot(
+        correlation_matrix, 
+        diag = FALSE, 
+        order = input$cm_order, 
+        method = input$cm_method, 
+        type = input$cm_type, 
+        tl.pos = tl_pos, 
+        tl.cex = 0.8
+      )
+    }
+
+  })
   
-  
+  # Render the correlation matrix plot in the main panel
+  output$correlationMatrixPlot <- renderPlot({
+    correlationMatrixResults()
+  })
   
   
   #==========================================================
