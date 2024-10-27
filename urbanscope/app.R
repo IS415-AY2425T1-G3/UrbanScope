@@ -4,6 +4,8 @@ pacman::p_load(shiny,
                bslib,
                tidyverse,
                sfdep,
+               GWmodel,
+               corrplot,
                shinydashboard,
                shinythemes)
 
@@ -62,16 +64,64 @@ ui <- navbarPage(
     sidebarLayout(
       sidebarPanel(
         selectInput(
-          inputId = "map_type",
-          label = "Select Map Type",
+          inputId = "cm_method",
+          label = "Method",
           choices = c(
-            "Average Rental Price" = "avg_price",
-            "Count of Rental Flats" = "count"
+            "Circle" = "circle",
+            "Square" = "square",
+            "Ellipse" = "ellipse",
+            "Number" = "number",
+            "Pie" = "pie",
+            "Shade" = "shade",
+            "Color" = "color"
           ),
-          selected = "avg_price"
+          selected = "circle"
         ),
+        selectInput(
+          inputId = "cm_type",
+          label = "Type",
+          choices = c(
+            "Full" = "full",
+            "Upper" = "upper",
+            "Lower" = "lower"
+          ),
+          selected = "full"
+        ),
+        selectInput(
+          inputId = "cm_order",
+          label = "Order",
+          choices = c(
+            "Original" = "original",
+            "Angular Order of the Eigenvectors Order (AOE)" = "AOE",
+            "First Principal Component Order (FPC)" = "FPC",
+            "Hierarchical Clustering Order" = "hclust",
+            "Alphabetical Order" = "alphabet"
+          ),
+          selected = "original"
+        ),
+        conditionalPanel(
+          condition = "input.cm_order == 'hclust'",
+          selectInput(
+            inputId = "cm_hclust_method",
+            label = "Hierarchical Clustering Method",
+            choices = c(
+              "Ward's Method" = "ward",
+              "Ward's Method (D)" = "ward.D",
+              "Ward's Method (D2)" = "ward.D2",
+              "Single Linkage" = "single",
+              "Complete Linkage" = "complete",
+              "Average Linkage" = "average",
+              "McQuitty Method" = "mcquitty",
+              "Median Method" = "median",
+              "Centroid Method" = "centroid"
+            ),
+            selected = "ward"
+          )
+        ),
+        actionButton("CorrelationMatrixUpdate", "Update"),
         tmapOutput("mapPlot", width = "100%", height = 580)
       ),
+      
       mainPanel(tmapOutput(
         "mapPlot", width = "100%", height = 580
       ))
@@ -214,6 +264,36 @@ server <- function(input, output) {
   output$statistics <- renderTable({
     summary_statistics()
   }, striped = TRUE, hover = TRUE, bordered = TRUE)
+  
+  #==========================================================
+  # Correlation Matrix
+  #==========================================================
+  
+  
+  
+  
+  
+  #==========================================================
+  # GWR
+  #==========================================================
+  
+  
+  
+  
+  
+  
+  #==========================================================
+  # Predictive Model
+  #==========================================================
+  
+  
+  
+  #==========================================================
+  # Data Table
+  #==========================================================
+  
+  
+  
   
 }
 
