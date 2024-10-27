@@ -1,16 +1,22 @@
-pacman::p_load(shiny,
-               sf,
-               tmap,
-               bslib,
-               tidyverse,
-               sfdep,
-               GWmodel,
-               corrplot,
-               shinydashboard,
-               shinythemes)
+pacman::p_load(
+  shiny,
+  sf,
+  tmap,
+  bslib,
+  tidyverse,
+  sfdep,
+  GWmodel,
+  corrplot,
+  shinydashboard,
+  shinythemes,
+  plotly
+)
 
 rental_sf <- read_rds('data/rds/rental_sf.rds')
 mpsz_sf <- read_rds('data/rds/mpsz_grped_by_town.rds')
+
+categorical_cols <- c("town", "rent_approval_date", "flat_type", "region")
+
 #========================#
 ###### Shiny UI ######
 #========================#
@@ -20,45 +26,110 @@ ui <- navbarPage(
   fluid = TRUE,
   theme = shinytheme("united"),
   id = "navbarID",
-  navbarMenu("EDA", #==========================================================
-             # Histogram
-             #==========================================================
-             # tabPanel("Histogram"),
-             #==========================================================
-             # Chloropleth Map
-             #==========================================================
-             tabPanel(
-               "Chloropleth Map", sidebarLayout(
-                 sidebarPanel(
-                   selectInput(
-                     inputId = "plot_variable",
-                     label = "Select Plot Variable",
-                     choices = c("Median Rent" = "median_rent", "Count of Rented Flats" = "rented_count"),
-                     selected = "median_rent"
-                   ),
-                   selectInput(
-                     inputId = "flat_type",
-                     label = "Flat Type",
-                     choices = sort(unique(rental_sf$flat_type)),
-                     selected = sort(unique(rental_sf$flat_type))[1]
-                   ),
-                   selectInput(
-                     inputId = "month",
-                     label = "Month",
-                     choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
-                       format(rental_sf$rent_approval_date, "%Y %b")
-                     )),
-                     selected = '2024 Jan to Sep'
-                   )
-                 ),
-                 mainPanel(
-                   tmapOutput("chloropleth", width = "100%", height = 580),
-                   tags$div(style = "margin-top: 20px;"),
-                   # Add a div with margin
-                   wellPanel(tableOutput("statistics"))
-                 )
-               )
-             )),
+  navbarMenu(
+    "EDA",
+    #==========================================================
+    # Histogram
+    #==========================================================
+    tabPanel(
+      "Histogram/Barplot",
+      sidebarLayout(
+        sidebarPanel(
+          tabsetPanel(
+            id = "histogram_mode_selector",
+            tabPanel(
+              "Continuous",
+              selectInput(
+                inputId = "histo_plot_variable",
+                label = "Select Plot Variable",
+                choices = setdiff(colnames(rental_sf), c("geometry", categorical_cols)),
+                selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[1]
+              ),
+              selectInput(
+                inputId = "month",
+                label = "Month",
+                choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
+                  format(rental_sf$rent_approval_date, "%Y %b")
+                )),
+                selected = '2024 Jan to Sep'
+              ),
+              selectInput(
+                inputId = "flat_type",
+                label = "Flat Type",
+                choices = sort(unique(rental_sf$flat_type)),
+                selected = sort(unique(rental_sf$flat_type))[1]
+              ),
+              selectInput(
+                inputId = "town",
+                label = "Town",
+                choices = sort(unique(rental_sf$town)),
+                selected = sort(unique(rental_sf$town))[1]
+              ),
+              sliderInput(
+                inputId = "bin_number",
+                label = "Number of Bins",
+                min = 5,
+                max = 20,
+                value = c(12)
+              ),
+            ),
+            tabPanel(
+              "Categorical",
+              selectInput(
+                inputId = "histo_cat_plot_variable",
+                label = "Select Plot Variable",
+                choices = setdiff(categorical_cols, c('town'))
+              )
+            )
+          )
+        ),
+        mainPanel(
+          plotlyOutput("histo_bar_plot"),
+          tags$div(style = "margin-top: 20px;"),
+          conditionalPanel(condition = "input.histogram_mode_selector == 'Continuous'", wellPanel(tableOutput("histo_statistics")))
+        )
+      )
+    ),
+    #==========================================================
+    # Chloropleth Map
+    #==========================================================
+    tabPanel("Chloropleth Map", sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "chloro_plot_variable",
+          label = "Select Plot Variable",
+          choices = c("Median Rent" = "median_rent", "Count of Rented Flats" = "rented_count"),
+          selected = "median_rent"
+        ),
+        selectInput(
+          inputId = "month",
+          label = "Month",
+          choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
+            format(rental_sf$rent_approval_date, "%Y %b")
+          )),
+          selected = '2024 Jan to Sep'
+        ),
+        selectInput(
+          inputId = "flat_type",
+          label = "Flat Type",
+          choices = sort(unique(rental_sf$flat_type)),
+          selected = sort(unique(rental_sf$flat_type))[1]
+        )
+      ),
+      mainPanel(
+        tmapOutput("chloropleth", width = "100%", height = 580),
+        tags$div(style = "margin-top: 20px;"),
+        wellPanel(
+          uiOutput("chloro_stats_title"),
+          # Output for dynamic title
+          tableOutput("chloro_statistics")
+        )
+      )
+    ))
+  ),
+  #==========================================================
+  # Correlation Matrix
+  #==========================================================
   tabPanel(
     "Correlation Matrix",
     sidebarLayout(
@@ -120,7 +191,8 @@ ui <- navbarPage(
         checkboxGroupInput(
           inputId = "selected_columns",
           label = "Select Independent Columns",
-          choices = colnames(rental_sf)[7:19],  # Update to the range of your independent columns
+          choices = colnames(rental_sf)[7:19],
+          # Update to the range of your independent columns
           selected = colnames(rental_sf)[7:19]  # Default to all columns or any specific default
         ),
       ),
@@ -190,9 +262,153 @@ ui <- navbarPage(
 
 server <- function(input, output) {
   #==========================================================
+  # Summary Statistics
+  #==========================================================
+  # Define a function that takes data and a column name as arguments
+  calculate_summary_statistics <- function(data, column, original_data = NULL) {
+    # Check if the column exists in the data
+    if (!(column %in% colnames(data))) {
+      stop("The specified column does not exist in the data.")
+    }
+    
+    # Filter out non-numeric columns
+    if (!is.numeric(data[[column]])) {
+      stop("The specified column is not numeric.")
+    }
+    
+    # Use the row count of original_data if provided, otherwise use the current data
+    total_rows <- if (!is.null(original_data))
+      nrow(original_data)
+    else
+      nrow(data)
+    
+    # Calculate summary statistics
+    avg <- mean(data[[column]], na.rm = TRUE)
+    median_val <- median(data[[column]], na.rm = TRUE)
+    min_val <- min(data[[column]], na.rm = TRUE)
+    max_val <- max(data[[column]], na.rm = TRUE)
+    std_dev <- sd(data[[column]], na.rm = TRUE)
+    iqr_val <- IQR(data[[column]], na.rm = TRUE)
+    
+    # Calculate Q1 and Q3
+    q1_val <- quantile(data[[column]], 0.25, na.rm = TRUE)
+    q3_val <- quantile(data[[column]], 0.75, na.rm = TRUE)
+    
+    # Create a summary statistics data frame
+    stats <- data.frame(
+      Total_Rows = total_rows,
+      Average = round(avg, 2),
+      Median = round(median_val, 2),
+      Min = round(min_val, 2),
+      Max = round(max_val, 2),
+      Std_Dev = round(std_dev, 2),
+      Q1 = round(q1_val, 2),
+      Q3 = round(q3_val, 2),
+      IQR = round(iqr_val, 2)
+      
+    )
+    
+    return(stats)
+  }
+  
+  
+  # FOR CHLORO SUMMARY STAT
+  chloro_summary_statistics <- reactive({
+    data <- calculate_chloropleth_data()  # Get grouped data
+    filtered_data <- chloro_filtered_data()  # Get filtered data
+    calculate_summary_statistics(data, input$chloro_plot_variable, filtered_data)  # Call the function with the filtered data
+  })
+  
+  output$chloro_statistics <- renderTable({
+    chloro_summary_statistics()  # This remains unchanged
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+  
+  output$chloro_stats_title <- renderUI({
+    req(input$chloro_plot_variable, input$flat_type, input$month)  # Ensure all inputs are available
+    
+    # Construct the dynamic title with smaller font for Flat Type and Month
+    title_text <- paste(
+      "Summary Statistics for:",
+      input$chloro_plot_variable,
+      "<br><span style='font-size: 0.85em; color: #555;'><strong>Flat Type:</strong> ",
+      input$flat_type,
+      "| <strong>Month:</strong> ",
+      input$month,
+      "</span>"
+    )
+    
+    tags$h4(HTML(title_text))  # Render the title with HTML
+  })
+  
+  # FOR HISTO SUMMARY STAT
+  histo_summary_statistics <- reactive({
+    if (input$histogram_mode_selector == "Continuous") {
+      data <- histo_filtered_data()  # Get filtered data
+      calculate_summary_statistics(data, input$histo_plot_variable)
+    } else {
+      return(NULL)  # Return NULL or an empty data frame if mode is not "Continuous"
+    }
+  })
+  
+  output$histo_statistics <- renderTable({
+    histo_summary_statistics()  # This remains unchanged
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+  #==========================================================
+  # Histogram / Barplot
+  #==========================================================
+  # Only for continuous mode
+  histo_filtered_data <- reactive({
+    req(input$flat_type, input$month, input$town)  # Ensure inputs are available
+    rental_sf %>%
+      mutate(year_month = format(rent_approval_date, "%Y %b")) %>%
+      filter (if (input$month == "2024 Jan to Sep") {
+        TRUE  # No additional filtering by month
+      } else {
+        format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
+      }) %>%
+      filter(flat_type == input$flat_type) %>%
+      filter(town == input$town)
+    
+  })
+  
+  # Generate plot based on selected tab
+  output$histo_bar_plot <- renderPlotly({
+    if (input$histogram_mode_selector == "Continuous") {
+      # Continuous plot logic
+      p <- ggplot(histo_filtered_data(),
+                  aes_string(x = input$histo_plot_variable)) +
+        geom_histogram(
+          bins = input$bin_number,
+          fill = "blue",
+          color = "black"
+        ) +  
+        labs(
+          title = paste("Histogram of", input$histo_plot_variable),
+          x = input$histo_plot_variable,
+          y = "Frequency"
+        )
+    } else if (input$histogram_mode_selector == "Categorical") {
+      # Categorical plot logic
+      p <- ggplot(rental_sf,
+                  aes_string(x = input$histo_cat_plot_variable)) +
+        geom_bar(fill = "blue", color = "black") +
+        labs(
+          title = paste("Bar Plot of", input$histo_cat_plot_variable),
+          x = input$histo_cat_plot_variable,
+          y = "Frequency"
+        )
+    }
+    
+    # Convert ggplot object to an interactive plotly object
+    ggplotly(p)
+  })
+  
+  
+  
+  #==========================================================
   # Chloropleth Map
   #==========================================================
-  filtered_data <- reactive({
+  chloro_filtered_data <- reactive({
     req(input$flat_type, input$month)  # Ensure inputs are available
     rental_sf %>%
       mutate(
@@ -209,8 +425,7 @@ server <- function(input, output) {
   })
   
   calculate_chloropleth_data <- reactive({
-    data <- filtered_data()
-    
+    data <- chloro_filtered_data()
     
     data_summary <- data %>%
       group_by(town) %>%
@@ -235,43 +450,19 @@ server <- function(input, output) {
       return(NULL)  # Return NULL if there is no data to plot
     }
     
-    if (input$plot_variable == "rented_count") {
+    if (input$chloro_plot_variable == "rented_count") {
       tmap_mode("view")
       qtm(chloropleth_data, fill = "rented_count")
-    } else if (input$plot_variable == "median_rent") {
+    } else if (input$chloro_plot_variable == "median_rent") {
       tmap_mode("view")
       qtm(chloropleth_data, fill = "median_rent")
     }
   })
   
-  summary_statistics <- reactive({
-    data <- filtered_data()
-    
-    total_rentals <- nrow(data)
-    avg_rent <- mean(data$monthly_rent, na.rm = TRUE)
-    median_rent <- median(data$monthly_rent, na.rm = TRUE)
-    max_rent <- max(data$monthly_rent, na.rm = TRUE)
-    min_rent <- min(data$monthly_rent, na.rm = TRUE)
-    
-    stats <- data.frame(
-      Total_Rentals = total_rentals,
-      Average_Rent = round(avg_rent, 2),
-      Median_Rent = round(median_rent, 2),
-      Max_Rent = round(max_rent, 2),
-      Min_Rent = round(min_rent, 2)
-    )
-    
-    return(stats)
-  })
-  
-  output$statistics <- renderTable({
-    summary_statistics()
-  }, striped = TRUE, hover = TRUE, bordered = TRUE)
-  
   #==========================================================
   # Correlation Matrix
   #==========================================================
-
+  
   # Extract independent columns
   independent_columns <- reactive({
     req(input$selected_columns)  # Ensure at least one column is selected
@@ -286,34 +477,36 @@ server <- function(input, output) {
     correlation_matrix <- cor(independent_columns(), use = "pairwise.complete.obs")
     
     # Set tl.pos based on cm_type
-    tl_pos <- switch(input$cm_type,
-                     "full" = "full",
-                     "upper" = "td",
-                     "lower" = "ld")
+    tl_pos <- switch(
+      input$cm_type,
+      "full" = "full",
+      "upper" = "td",
+      "lower" = "ld"
+    )
     
     if (input$cm_order == "hclust") {
       corrplot(
-        correlation_matrix, 
-        diag = FALSE, 
-        order = input$cm_order, 
-        method = input$cm_method, 
+        correlation_matrix,
+        diag = FALSE,
+        order = input$cm_order,
+        method = input$cm_method,
         type = input$cm_type,
         hclust.method = input$cm_hclust_method,
-        tl.pos = tl_pos, 
+        tl.pos = tl_pos,
         tl.cex = 0.8
       )
     } else {
       corrplot(
-        correlation_matrix, 
-        diag = FALSE, 
-        order = input$cm_order, 
-        method = input$cm_method, 
-        type = input$cm_type, 
-        tl.pos = tl_pos, 
+        correlation_matrix,
+        diag = FALSE,
+        order = input$cm_order,
+        method = input$cm_method,
+        type = input$cm_type,
+        tl.pos = tl_pos,
         tl.cex = 0.8
       )
     }
-
+    
   })
   
   # Render the correlation matrix plot in the main panel
