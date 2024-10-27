@@ -76,10 +76,22 @@ ui <- navbarPage(
             tabPanel(
               "Categorical",
               selectInput(
-                inputId = "histo_cat_plot_variable",
-                label = "Select Plot Variable",
+                inputId = "histo_cat_plot_variable_x",
+                label = "Select X Variable",
                 choices = setdiff(categorical_cols, c('town'))
+              ),
+              selectInput(
+                inputId = "histo_cat_plot_variable_y",
+                label = "Select Y Variable",
+                choices = c("Frequency" = "frequency", "Median Rent" = "median_rent") # You can add other variables as needed
               )
+              # radioButtons(
+              #   inputId = "flat_type_radio",
+              #  label = "Select Flat Type",
+              # choices = sort(unique(rental_sf$flat_type)),
+              #  selected = sort(unique(rental_sf$flat_type))[1],
+              # inline = TRUE
+              #)
             )
           )
         ),
@@ -125,6 +137,26 @@ ui <- navbarPage(
           tableOutput("chloro_statistics")
         )
       )
+    )),
+    #==========================================================
+    # Scatterplot
+    #==========================================================
+    tabPanel("Scatterplot", sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          "scatter_x",
+          "Select X Variable",
+          choices = setdiff(colnames(rental_sf), c("geometry", categorical_cols)),
+          selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[1]
+        ),
+        selectInput(
+          "scatter_y",
+          "Select Y Variable",
+          choices = setdiff(colnames(rental_sf), c("geometry", categorical_cols)),
+          selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[2]  # Select a different column for Y by default
+        )
+      ),
+      mainPanel(plotlyOutput("scatter_plot"))
     ))
   ),
   #==========================================================
@@ -371,8 +403,21 @@ server <- function(input, output) {
     
   })
   
+  # Reactive function to calculate median rent based on input variables
+  calculate_barplot_y <- reactive({
+    rental_sf %>%
+      group_by(!!sym(input$histo_cat_plot_variable_x)) %>% # Convert input to column name
+      summarize(
+        rented_count = n(),
+        median_rent = median(monthly_rent, na.rm = TRUE),
+        .groups = 'drop'
+      )
+    
+  })
+  
   # Generate plot based on selected tab
   output$histo_bar_plot <- renderPlotly({
+    req(input$histogram_mode_selector)
     if (input$histogram_mode_selector == "Continuous") {
       # Continuous plot logic
       p <- ggplot(histo_filtered_data(),
@@ -381,7 +426,7 @@ server <- function(input, output) {
           bins = input$bin_number,
           fill = "blue",
           color = "black"
-        ) +  
+        ) +
         labs(
           title = paste("Histogram of", input$histo_plot_variable),
           x = input$histo_plot_variable,
@@ -389,14 +434,39 @@ server <- function(input, output) {
         )
     } else if (input$histogram_mode_selector == "Categorical") {
       # Categorical plot logic
-      p <- ggplot(rental_sf,
-                  aes_string(x = input$histo_cat_plot_variable)) +
-        geom_bar(fill = "blue", color = "black") +
-        labs(
-          title = paste("Bar Plot of", input$histo_cat_plot_variable),
-          x = input$histo_cat_plot_variable,
-          y = "Frequency"
-        )
+      if (input$histo_cat_plot_variable_y == "frequency") {
+        # Frequency plot using count
+        p <- ggplot(rental_sf,
+                    aes_string(x = input$histo_cat_plot_variable_x)) +
+          geom_bar(fill = "blue", color = "black") +
+          labs(
+            title = paste("Bar Plot of", input$histo_cat_plot_variable_x),
+            x = input$histo_cat_plot_variable_x,
+            y = "Frequency"
+          )
+      } else if (input$histo_cat_plot_variable_y == "median_rent") {
+        # Use calculated data for median rent
+        barplot_data <- calculate_barplot_y()
+        p <- ggplot(
+          barplot_data,
+          aes_string(
+            x = input$histo_cat_plot_variable_x,
+            y = "median_rent"
+          )
+        ) +
+          geom_bar(stat = "identity",
+                   fill = "blue",
+                   color = "black") +
+          labs(
+            title = paste(
+              "Bar Plot of",
+              input$histo_cat_plot_variable_x,
+              "vs Median Rent"
+            ),
+            x = input$histo_cat_plot_variable_x,
+            y = "Median Rent"
+          )
+      }
     }
     
     # Convert ggplot object to an interactive plotly object
@@ -458,6 +528,26 @@ server <- function(input, output) {
       qtm(chloropleth_data, fill = "median_rent")
     }
   })
+  #==========================================================
+  # Scatterplot: TBD
+  #==========================================================
+  output$scatter_plot <- renderPlotly({
+    req(input$scatter_x, input$scatter_y)  # Ensure x and y inputs are selected
+    
+    # Build the scatter plot
+    p <- ggplot(rental_sf,
+                aes_string(x = input$scatter_x, y = input$scatter_y)) +
+      geom_point(color = "blue", size = 2) +
+      labs(
+        title = paste("Scatterplot of", input$scatter_x, "vs", input$scatter_y),
+        x = input$scatter_x,
+        y = input$scatter_y
+      ) +
+      theme_minimal()  # Optional, for cleaner aesthetics
+    
+    ggplotly(p)  # Convert ggplot to interactive Plotly plot
+  })
+  
   
   #==========================================================
   # Correlation Matrix
