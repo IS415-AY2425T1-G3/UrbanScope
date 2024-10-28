@@ -383,6 +383,14 @@ ui <- navbarPage(
                    value = "stepwise_comparison_tab",
                    plotOutput("stepwise_comparison_plot", width = "100%", height = "600px")
                  ),
+                 tabPanel(
+                   "Regression Diagnostics (olsrr Package)",
+                   value = "mlr_rd_olsrr_tab",
+                   verbatimTextOutput("olsrr_multicollinearity_plot"),
+                   withSpinner(plotOutput("olsrr_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("olsrr_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(tmapOutput("olsrr_MLR_RES_plot", width = "100%", height = 580))
+                 )
                  
                ))
              )), 
@@ -852,7 +860,6 @@ server <- function(input, output) {
     } else if (active_tab == "stepwise_tab") {
       result <- mlrResult()
       # to get the user input of the stepwise selection
-     
       if ("Forward" %in% input$stepwise_method) {
         rental_fw_mlr <<- ols_step_forward_p(
           result,
@@ -916,10 +923,6 @@ server <- function(input, output) {
           ggcoefstats(rental_bi_mlr$model, sort = "ascending")
         })
       }
-      
-      
-      
-      
     }
   }
   
@@ -946,12 +949,14 @@ server <- function(input, output) {
   #=======================
   # reload the output everytime
   observeEvent(input$mlr_tabs, {
-    if(input$mlr_tabs != "stepwise_comparison_tab") {
+    # re-enable the submit button
+    if(input$mlr_tabs != "stepwise_comparison_tab" && input$mlr_tabs != "mlr_rd_olsrr_tab" ) {
       shinyjs::enable("MLRSubmit")  # Re-enable the button after processing
       # Change button color and text back to original
       shinyjs::runjs("$('#MLRSubmit').css('background-color', '#007BFF');")  # Original color
       shinyjs::runjs("$('#MLRSubmit').css('border-color', '#007BFF');")  # Original border color
     }
+    # To check which tab currently on
     if (input$mlr_tabs == "mlr_model_info_tab") {
       output$mlr_model_info <- renderText({
         if (is.null(mlr_model_result)) {
@@ -991,7 +996,8 @@ server <- function(input, output) {
           text = "Please at least run the Stepwise Method once before comparing performance.",
           type = "warning"
         )
-      } else {
+      }
+      else {# load the output
         # Create a list to hold valid models
         models_to_compare <- list(MLR = mlr_model_result)
         # Check if each stepwise model is not NULL and add to the comparison list
@@ -1011,6 +1017,48 @@ server <- function(input, output) {
         output$stepwise_comparison_plot <- renderPlot({
           # Plot the comparison metric
           plot(metric)
+        })
+      }
+    }else if (input$mlr_tabs == "mlr_rd_olsrr_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      # Check if any model is NULL
+      if (is.null(mlr_model_result)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the MLR model at least once, either in the Model Info Tab or the Publication Quality Table Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$olsrr_multicollinearity_plot <- renderText({
+          result <-  paste(capture.output(ols_vif_tol(mlr_model_result)), collapse = "\n")
+          return(result)
+        })
+        
+        output$olsrr_non_linearity_plot <- renderPlot({
+          ols_plot_resid_fit(mlr_model_result)
+        })
+        
+        output$olsrr_normality_plot <- renderPlot({
+          ols_plot_resid_hist(mlr_model_result)
+        })
+        
+        mlr.output <- as.data.frame(mlr_model_result$residuals)
+        rental_res_sf <- cbind(rental_sf, 
+                               mlr_model_result$residuals) %>%
+          rename(`MLR_RES` = `mlr_model_result.residuals`)
+        
+        output$olsrr_MLR_RES_plot <- renderTmap({
+          tmap_mode("view")
+          tm_shape(mpsz_sf)+
+            tmap_options(check.and.fix = TRUE) +
+            tm_polygons(alpha = 0.4) +
+            tm_shape(rental_res_sf) +  
+            tm_dots(col = "MLR_RES",
+                    alpha = 0.6,
+                    style="quantile") +
+            tm_view(set.zoom.limits = c(11,14))
         })
       }
     }
