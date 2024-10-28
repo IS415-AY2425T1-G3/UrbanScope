@@ -386,12 +386,42 @@ ui <- navbarPage(
                  tabPanel(
                    "Regression Diagnostics (olsrr Package)",
                    value = "mlr_rd_olsrr_tab",
-                   verbatimTextOutput("olsrr_multicollinearity_plot"),
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("olsrr_multicollinearity_text"),
                    withSpinner(plotOutput("olsrr_non_linearity_plot", width = "100%", height = "600px")),
                    withSpinner(plotOutput("olsrr_normality_plot", width = "100%", height = "600px")),
                    withSpinner(tmapOutput("olsrr_MLR_RES_plot", width = "100%", height = 580))
-                 )
-                 
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Forward",
+                   value = "mlr_rd_performance_forward_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_forward_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_forward_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_outlier_plot", width = "100%", height = "600px")),
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Backward",
+                   value = "mlr_rd_performance_backward_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_backward_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_backward_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_outlier_plot", width = "100%", height = "600px")),
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Both",
+                   value = "mlr_rd_performance_both_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_both_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_both_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_outlier_plot", width = "100%", height = "600px")),
+                 ),
                ))
              )), 
     #==========================================================
@@ -947,6 +977,7 @@ server <- function(input, output) {
   #=======================
   # Observe GWR Tab change
   #=======================
+  
   # reload the output everytime
   observeEvent(input$mlr_tabs, {
     # re-enable the submit button
@@ -1031,7 +1062,7 @@ server <- function(input, output) {
                    text = "Please ensure you run the MLR model at least once, either in the Model Info Tab or the Publication Quality Table Tab.",
                    type = "warning")
       }else { # if is not NULL, display the output
-        output$olsrr_multicollinearity_plot <- renderText({
+        output$olsrr_multicollinearity_text <- renderText({
           result <-  paste(capture.output(ols_vif_tol(mlr_model_result)), collapse = "\n")
           return(result)
         })
@@ -1060,6 +1091,129 @@ server <- function(input, output) {
                     style="quantile") +
             tm_view(set.zoom.limits = c(11,14))
         })
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_forward_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_fw_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Forware model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_forward_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_fw_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_forward_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_fw_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_forward_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_fw_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_forward_normality_plot <- renderPlot({
+          plot(check_normality(rental_fw_mlr$model))
+        })
+        output$performance_forward_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_fw_mlr$model,
+                              method = "pareto"))
+        })
+        
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_backward_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_bw_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Backward model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_backward_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_bw_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_backward_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_bw_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_backward_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_bw_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_backward_normality_plot <- renderPlot({
+          plot(check_normality(rental_bw_mlr$model))
+        })
+        output$performance_backward_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_bw_mlr$model,
+                              method = "pareto"))
+        })
+        
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_both_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_bi_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Both model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_both_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_bi_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_both_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_bi_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_both_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_bi_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_both_normality_plot <- renderPlot({
+          plot(check_normality(rental_bi_mlr$model))
+        })
+        output$performance_both_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_bi_mlr$model,
+                              method = "pareto"))
+        })
+        
       }
     }
   })
