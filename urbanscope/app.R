@@ -6,7 +6,10 @@ pacman::p_load(
   tidyverse,
   sfdep,
   GWmodel,
+  olsrr,
+  performance,
   corrplot,
+  ggstatsplot,
   shinydashboard,
   shinythemes,
   plotly,
@@ -21,9 +24,11 @@ gwr_model <- read_rds('data/rds/gwr_adaptive.rds')
 
 categorical_cols <- c("town", "rent_approval_date", "flat_type", "region")
 
-# Define a global variable to store GWR results
-gwr_global_result <- NULL
-
+# Define a global variable to store MLR results
+mlr_model_result <- NULL
+rental_fw_mlr <- NULL
+rental_bw_mlr <- NULL
+rental_bi_mlr <- NULL
 #========================#
 ###### Shiny UI ######
 #========================#
@@ -168,152 +173,326 @@ ui <- navbarPage(
     ))
   ),
   #==========================================================
-  # Correlation Matrix
+  # Explanatory Model
   #==========================================================
-  tabPanel(
-    "Correlation Matrix",
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(
-          inputId = "cm_method",
-          label = "Method",
-          choices = c(
-            "Circle" = "circle",
-            "Square" = "square",
-            "Ellipse" = "ellipse",
-            "Number" = "number",
-            "Pie" = "pie",
-            "Shade" = "shade",
-            "Color" = "color"
-          ),
-          selected = "circle"
-        ),
-        selectInput(
-          inputId = "cm_type",
-          label = "Type",
-          choices = c(
-            "Full" = "full",
-            "Upper" = "upper",
-            "Lower" = "lower"
-          ),
-          selected = "full"
-        ),
-        selectInput(
-          inputId = "cm_order",
-          label = "Order",
-          choices = c(
-            "Original" = "original",
-            "Angular Order of the Eigenvectors Order (AOE)" = "AOE",
-            "First Principal Component Order (FPC)" = "FPC",
-            "Hierarchical Clustering Order" = "hclust",
-            "Alphabetical Order" = "alphabet"
-          ),
-          selected = "original"
-        ),
-        conditionalPanel(
-          condition = "input.cm_order == 'hclust'",
+  navbarMenu(
+    "Explanatory Model",
+    #==========================================================
+    # Correlation Matrix
+    #==========================================================
+    tabPanel(
+      "Correlation Matrix",
+      sidebarLayout(
+        sidebarPanel(
           selectInput(
-            inputId = "cm_hclust_method",
-            label = "Hierarchical Clustering Method",
+            inputId = "cm_method",
+            label = "Method",
             choices = c(
-              "Ward's Method (D)" = "ward.D",
-              "Ward's Method (D2)" = "ward.D2",
-              "Single Linkage" = "single",
-              "Complete Linkage" = "complete",
-              "Average Linkage" = "average",
-              "McQuitty Method" = "mcquitty",
-              "Median Method" = "median",
-              "Centroid Method" = "centroid"
+              "Circle" = "circle",
+              "Square" = "square",
+              "Ellipse" = "ellipse",
+              "Number" = "number",
+              "Pie" = "pie",
+              "Shade" = "shade",
+              "Color" = "color"
             ),
-            selected = "ward"
-          )
+            selected = "circle"
+          ),
+          selectInput(
+            inputId = "cm_type",
+            label = "Type",
+            choices = c(
+              "Full" = "full",
+              "Upper" = "upper",
+              "Lower" = "lower"
+            ),
+            selected = "full"
+          ),
+          selectInput(
+            inputId = "cm_order",
+            label = "Order",
+            choices = c(
+              "Original" = "original",
+              "Angular Order of the Eigenvectors Order (AOE)" = "AOE",
+              "First Principal Component Order (FPC)" = "FPC",
+              "Hierarchical Clustering Order" = "hclust",
+              "Alphabetical Order" = "alphabet"
+            ),
+            selected = "original"
+          ),
+          conditionalPanel(
+            condition = "input.cm_order == 'hclust'",
+            selectInput(
+              inputId = "cm_hclust_method",
+              label = "Hierarchical Clustering Method",
+              choices = c(
+                "Ward's Method (D)" = "ward.D",
+                "Ward's Method (D2)" = "ward.D2",
+                "Single Linkage" = "single",
+                "Complete Linkage" = "complete",
+                "Average Linkage" = "average",
+                "McQuitty Method" = "mcquitty",
+                "Median Method" = "median",
+                "Centroid Method" = "centroid"
+              ),
+              selected = "ward"
+            )
+          ),
+          checkboxGroupInput(
+            inputId = "selected_columns",
+            label = "Select Independent Columns",
+            choices = colnames(rental_sf)[7:19],
+            selected = colnames(rental_sf)[7:19]
+          ),
         ),
-        checkboxGroupInput(
-          inputId = "selected_columns",
-          label = "Select Independent Columns",
-          choices = colnames(rental_sf)[7:19],
-          selected = colnames(rental_sf)[7:19]
-        ),
-      ),
-      
-      mainPanel(
-        plotOutput("correlationMatrixPlot", width = "100%", height = 580)
-      )
-    )
-  ),
-  #==========================================================
-  # GWR
-  #==========================================================
-  tabPanel("GWR", sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "gwr_dependent_variable",
-        label = "Dependent Variable",
-        choices = c(
-          "Monthly Rent" = "monthly_rent"
-        ),
-        selected = "CV"
-      ),
-      checkboxGroupInput(
-        inputId = "gwr_independent_variables",
-        label = "Select Independent Variables",
-        choices = colnames(rental_sf)[7:19],
-        selected = colnames(rental_sf)[7:19],
-        inline = FALSE 
-      ),
-      selectInput(
-        inputId = "gwr_approach",
-        label = "Bandwidth Approach",
-        choices = c(
-          "Cross-validation (CV)" = "CV",
-          "Akaike Information Criterion corrected (AICc)" = "AIC"
-        ),
-        selected = "CV"
-      ),
-      selectInput(
-        inputId = "gwr_adaptive",
-        label = "Type of Bandwidth",
-        choices = c(
-          "Adaptive" = "TRUE",
-          "Fixed" = "FALSE"
-        ),
-        selected = "TRUE"
-      ),
-      selectInput(
-        inputId = "gwr_kernel",
-        label = "Kernel",
-        choices = c(
-          "Gaussian" = "gaussian",
-          "Exponential" = "exponential",
-          "Bisquare" = "bisquare",
-          "Tricube" = "tricube",
-          "Boxcar" = "boxcar"
-        ),
-        selected = "gaussian"
-      ),
-      selectInput(
-        inputId = "gwr_longlat",
-        label = "Distance Measure",
-        choices = c(
-          "Great Circle Distance" = "TRUE",
-          "Euclidean Distance" = "FALSE"
-        ),
-        selected = "FALSE"
-      ),
-      actionButton(
-        inputId = "GWRSubmit",
-        label = "Submit",
-        style = "color: white; background-color: #007BFF; border-color: #007BFF"
+        
+        mainPanel(
+          plotOutput("correlationMatrixPlot", width = "100%", height = 580)
+        )
       )
     ),
-    mainPanel(tabsetPanel(
-      id = "gwr_tabs",
-      tabPanel("Model Info", value = "gwr_model_info_tab", withSpinner(verbatimTextOutput("gwr_model_info"))),
-      tabPanel("Local R2 Map", value = "gwr_local_r2_tab", withSpinner(
-        tmapOutput("gwr_local_r2_plot", width = "100%", height = 580)
+    #==========================================================
+    # Multiple Linear Regression
+    #==========================================================
+    tabPanel("Multiple Linear Regression",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput(
+                   inputId = "mlr_dependent_variable",
+                   label = "Dependent Variable",
+                   choices = c("Monthly Rent" = "monthly_rent"),
+                   selected = "CV"
+                 ),
+                 checkboxGroupInput(
+                   inputId = "mlr_independent_variables",
+                   label = "Select Independent Variables",
+                   choices = colnames(rental_sf)[7:19],
+                   selected = colnames(rental_sf)[7:19],
+                   inline = FALSE
+                 ),
+                 conditionalPanel(
+                   condition = "input.mlr_tabs == 'stepwise_tab'",
+                   sliderInput(
+                     inputId = "stepwise_p_value_threshold",
+                     label = "Select p-value threshold for Stepwise Selection:",
+                     min = 0.01,
+                     max = 1,
+                     value = 0.05,
+                     step = 0.01
+                   ),
+                   selectInput(
+                     inputId = "stepwise_method",
+                     label = "Choose Stepwise Method:",
+                     choices = c("Forward", "Backward", "Both"),
+                     selected = "Forward",
+                     multiple = TRUE
+                   )
+                 ),
+                 actionButton(
+                   inputId = "MLRSubmit",
+                   label = "Submit",
+                   style = "color: white; background-color: #007BFF; border-color: #007BFF"
+                 )
+               ),
+               mainPanel(tabsetPanel(
+                 id = "mlr_tabs",
+                 tabPanel("Model Info", value = "mlr_model_info_tab", verbatimTextOutput("mlr_model_info")),
+                 tabPanel(
+                   "Publication Quality Table ",
+                   value = "mlr_pqt_tab",
+                   verbatimTextOutput("mlr_pqt_model_info")
+                 ),
+                 tabPanel(
+                   "Stepwise Method",
+                   value = "stepwise_tab",
+                   conditionalPanel(
+                     condition = "input.stepwise_method.includes('Forward')",
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Information - Forward"),
+                       verbatimTextOutput("stepwise_forward_info")
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Plot - Forward"),
+                       plotOutput("stepwise_forward_plot", width = "100%", height = "600px")
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Parameters - Forward"),
+                       plotOutput(
+                         "stepwise_forward_parameters_plot",
+                         width = "100%",
+                         height = "600px"
+                       )
+                     )),
+                   ),
+                   
+                   conditionalPanel(
+                     condition = "input.stepwise_method.includes('Backward')",
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Information - Backward"),
+                       verbatimTextOutput("stepwise_backward_info")
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Plot - Backward"),
+                       plotOutput(
+                         "stepwise_backward_plot",
+                         width = "100%",
+                         height = "600px"
+                       )
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Parameters - Backward"),
+                       plotOutput(
+                         "stepwise_backward_parameters_plot",
+                         width = "100%",
+                         height = "600px"
+                       )
+                     )),
+                   ),
+                   
+                   conditionalPanel(
+                     condition = "input.stepwise_method.includes('Both')",
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Information - Both"),
+                       verbatimTextOutput("stepwise_both_info")
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Plot - Both"),
+                       plotOutput("stepwise_both_plot", width = "100%", height = "600px")
+                     )),
+                     fluidRow(column(
+                       width = 12,
+                       h3("Model Parameters - Both"),
+                       plotOutput(
+                         "stepwise_both_parameters_plot",
+                         width = "100%",
+                         height = "600px"
+                       )
+                     ))
+                   )
+                 ), 
+                 tabPanel(
+                   "Stepwise Comparison",
+                   value = "stepwise_comparison_tab",
+                   plotOutput("stepwise_comparison_plot", width = "100%", height = "600px")
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (olsrr Package)",
+                   value = "mlr_rd_olsrr_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("olsrr_multicollinearity_text"),
+                   withSpinner(plotOutput("olsrr_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("olsrr_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(tmapOutput("olsrr_MLR_RES_plot", width = "100%", height = 580))
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Forward",
+                   value = "mlr_rd_performance_forward_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_forward_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_forward_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_forward_outlier_plot", width = "100%", height = "600px")),
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Backward",
+                   value = "mlr_rd_performance_backward_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_backward_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_backward_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_backward_outlier_plot", width = "100%", height = "600px")),
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (Performance Package) - Both",
+                   value = "mlr_rd_performance_both_tab",
+                   h4("Please wait while the plots are loading. Do not click on other tabs."),
+                   verbatimTextOutput("performance_both_multicollinearity_text"),
+                   withSpinner(plotOutput("performance_both_multicollinearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_non_linearity_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_normality_plot", width = "100%", height = "600px")),
+                   withSpinner(plotOutput("performance_both_outlier_plot", width = "100%", height = "600px")),
+                 ),
+               ))
+             )), 
+    #==========================================================
+    # GWR
+    #==========================================================
+    tabPanel("GWR", sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "gwr_dependent_variable",
+          label = "Dependent Variable",
+          choices = c("Monthly Rent" = "monthly_rent"),
+          selected = "CV"
+        ),
+        checkboxGroupInput(
+          inputId = "gwr_independent_variables",
+          label = "Select Independent Variables",
+          choices = colnames(rental_sf)[7:19],
+          selected = colnames(rental_sf)[7:19],
+          inline = FALSE
+        ),
+        selectInput(
+          inputId = "gwr_approach",
+          label = "Bandwidth Approach",
+          choices = c(
+            "Cross-validation (CV)" = "CV",
+            "Akaike Information Criterion corrected (AICc)" = "AIC"
+          ),
+          selected = "CV"
+        ),
+        selectInput(
+          inputId = "gwr_adaptive",
+          label = "Type of Bandwidth",
+          choices = c("Adaptive" = "TRUE", "Fixed" = "FALSE"),
+          selected = "TRUE"
+        ),
+        selectInput(
+          inputId = "gwr_kernel",
+          label = "Kernel",
+          choices = c(
+            "Gaussian" = "gaussian",
+            "Exponential" = "exponential",
+            "Bisquare" = "bisquare",
+            "Tricube" = "tricube",
+            "Boxcar" = "boxcar"
+          ),
+          selected = "gaussian"
+        ),
+        selectInput(
+          inputId = "gwr_longlat",
+          label = "Distance Measure",
+          choices = c(
+            "Great Circle Distance" = "TRUE",
+            "Euclidean Distance" = "FALSE"
+          ),
+          selected = "FALSE"
+        ),
+        actionButton(
+          inputId = "GWRSubmit",
+          label = "Submit",
+          style = "color: white; background-color: #007BFF; border-color: #007BFF"
+        )
+      ),
+      mainPanel(tabsetPanel(
+        id = "gwr_tabs",
+        tabPanel("Model Info", value = "gwr_model_info_tab", withSpinner(verbatimTextOutput("gwr_model_info"))),
+        tabPanel("Local R2 Map", value = "gwr_local_r2_tab", withSpinner(
+          tmapOutput("gwr_local_r2_plot", width = "100%", height = 580)
+        ))
       ))
-    ))
-  )),
+    )),
+  ), 
   #==========================================================
   # Predictive Model
   #==========================================================
@@ -670,6 +849,375 @@ server <- function(input, output) {
     correlationMatrixResults()
   })
   
+  #==========================================================
+  # Multiple Linear Regression
+  #==========================================================
+  mlrResult <- eventReactive(input$MLRSubmit, {
+    # Create the formula based on selected variables
+    formula_input <- paste(
+      input$mlr_dependent_variable,
+      "~",
+      paste(input$mlr_independent_variables, collapse = " + ")
+    )
+    formula <- as.formula(formula_input)
+    # Run GWR with user-specified parameters
+    output <- lm(
+      formula = formula,
+      data = rental_sf
+    )
+    mlr_model_result <<- output # overwrite the gwr_model
+    return(output)
+  })
+  
+  
+  # Function to update the MLR button and output
+  updateMLRModelResult <- function(active_tab) {
+    if (active_tab == "mlr_model_info_tab") {
+      # Calculate the result and update the output
+      output$mlr_model_info <- renderText({
+        result <- paste(capture.output(
+          summary(mlrResult())
+          ), collapse = "\n")
+        return(result)
+      })
+    }else if (active_tab == "mlr_pqt_tab") {
+      output$mlr_pqt_model_info <- renderText({
+        result <- paste(capture.output(
+          ols_regress(mlrResult())
+          ), collapse = "\n")
+        return(result)
+      })
+    } else if (active_tab == "stepwise_tab") {
+      result <- mlrResult()
+      # to get the user input of the stepwise selection
+      if ("Forward" %in% input$stepwise_method) {
+        rental_fw_mlr <<- ols_step_forward_p(
+          result,
+          p_val = input$stepwise_p_value_threshold,
+          details = FALSE
+        )
+        # output the stepwise forward info
+        output$stepwise_forward_info <- renderText({
+          result <- paste(capture.output(
+            rental_fw_mlr
+          ), collapse = "\n")
+          return(result)
+        })
+        output$stepwise_forward_plot <- renderPlot({
+          plot(rental_fw_mlr)
+        })
+        output$stepwise_forward_parameters_plot <- renderPlot({
+          ggcoefstats(rental_fw_mlr$model, sort = "ascending")
+        })
+      }
+      # For backward
+      if ("Backward" %in% input$stepwise_method) {
+        rental_bw_mlr <<- ols_step_backward_p(
+          result,
+          p_val = input$stepwise_p_value_threshold,
+          details = FALSE
+        )
+        # output the stepwise backward info
+        output$stepwise_backward_info <- renderText({
+          result <- paste(capture.output(
+            rental_bw_mlr
+          ), collapse = "\n")
+          return(result)
+        })
+        output$stepwise_backward_plot <- renderPlot({
+          plot(rental_bw_mlr)
+        })
+        output$stepwise_backward_parameters_plot <- renderPlot({
+          ggcoefstats(rental_bw_mlr$model, sort = "ascending")
+        })
+        
+      }
+      #For Both
+      if ("Both" %in% input$stepwise_method) {
+        rental_bi_mlr <<- ols_step_both_p(
+          result,
+          p_val = input$stepwise_p_value_threshold,
+          details = FALSE
+        )
+        # output the stepwise backward info
+        output$stepwise_both_info <- renderText({
+          result <- paste(capture.output(
+            rental_bi_mlr
+          ), collapse = "\n")
+          return(result)
+        })
+        output$stepwise_both_plot <- renderPlot({
+          plot(rental_bi_mlr)
+        })
+        output$stepwise_both_parameters_plot <- renderPlot({
+          ggcoefstats(rental_bi_mlr$model, sort = "ascending")
+        })
+      }
+    }
+  }
+  
+  #==============================
+  # Observe Event
+  #==============================
+  # Function to update the MLR model after the button is click 
+  observeEvent(input$MLRSubmit, {
+    # Detect the active tab
+    active_tab <- input$mlr_tabs
+    if (length(input$stepwise_method) == 0 && active_tab == "stepwise_tab") {
+      shinyalert(
+        title = "Selection Required",
+        text = "You must select at least one stepwise method.",
+        type = "warning"
+      )
+    }
+    updateMLRModelResult(active_tab) # Method to process the model
+  })
+  
+  
+  #=======================
+  # Observe GWR Tab change
+  #=======================
+  
+  # reload the output everytime
+  observeEvent(input$mlr_tabs, {
+    # re-enable the submit button
+    if(input$mlr_tabs != "stepwise_comparison_tab" && input$mlr_tabs != "mlr_rd_olsrr_tab" ) {
+      shinyjs::enable("MLRSubmit")  # Re-enable the button after processing
+      # Change button color and text back to original
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#007BFF');")  # Original color
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#007BFF');")  # Original border color
+    }
+    # To check which tab currently on
+    if (input$mlr_tabs == "mlr_model_info_tab") {
+      output$mlr_model_info <- renderText({
+        if (is.null(mlr_model_result)) {
+          return("Please build the MLR model first.")
+        } else {
+          result <- paste(capture.output(
+            summary(mlr_model_result)
+            ), collapse = "\n")
+          return(result)
+        }
+      })
+    }else if(input$mlr_tabs == "mlr_pqt_tab") {
+      output$mlr_pqt_model_info <- renderText({
+        if (is.null(mlr_model_result)) {
+          return("Please build the MLR model first.")
+        } else {
+          result <- paste(capture.output(
+            ols_regress(mlr_model_result)
+          ), collapse = "\n")
+          return(result)
+        }
+        
+      })
+    } else if(input$mlr_tabs == "stepwise_comparison_tab") {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      # Check if any model is NULL
+      if (is.null(mlr_model_result) || 
+          (is.null(rental_fw_mlr$model) && 
+           is.null(rental_bw_mlr$model) && 
+           is.null(rental_bi_mlr$model))) {
+        # Display a message to ask the user to run the models first
+        shinyalert(
+          title = "Models Not Run",
+          text = "Please at least run the Stepwise Method once before comparing performance.",
+          type = "warning"
+        )
+      }
+      else {# load the output
+        # Create a list to hold valid models
+        models_to_compare <- list(MLR = mlr_model_result)
+        # Check if each stepwise model is not NULL and add to the comparison list
+        if (!is.null(rental_fw_mlr$model)) {
+          models_to_compare <- append(models_to_compare, list(Forward = rental_fw_mlr$model))
+        }
+        
+        if (!is.null(rental_bw_mlr$model)) {
+          models_to_compare <- append(models_to_compare, list(Backward = rental_bw_mlr$model))
+        }
+        
+        if (!is.null(rental_bi_mlr$model)) {
+          models_to_compare <- append(models_to_compare, list(Both = rental_bi_mlr$model))
+        }
+        # If all models are available, proceed with comparing performance
+        metric <- compare_performance(models_to_compare)
+        output$stepwise_comparison_plot <- renderPlot({
+          # Plot the comparison metric
+          plot(metric)
+        })
+      }
+    }else if (input$mlr_tabs == "mlr_rd_olsrr_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      # Check if any model is NULL
+      if (is.null(mlr_model_result)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the MLR model at least once, either in the Model Info Tab or the Publication Quality Table Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$olsrr_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(ols_vif_tol(mlr_model_result)), collapse = "\n")
+          return(result)
+        })
+        
+        output$olsrr_non_linearity_plot <- renderPlot({
+          ols_plot_resid_fit(mlr_model_result)
+        })
+        
+        output$olsrr_normality_plot <- renderPlot({
+          ols_plot_resid_hist(mlr_model_result)
+        })
+        
+        mlr.output <- as.data.frame(mlr_model_result$residuals)
+        rental_res_sf <- cbind(rental_sf, 
+                               mlr_model_result$residuals) %>%
+          rename(`MLR_RES` = `mlr_model_result.residuals`)
+        
+        output$olsrr_MLR_RES_plot <- renderTmap({
+          tmap_mode("view")
+          tm_shape(mpsz_sf)+
+            tmap_options(check.and.fix = TRUE) +
+            tm_polygons(alpha = 0.4) +
+            tm_shape(rental_res_sf) +  
+            tm_dots(col = "MLR_RES",
+                    alpha = 0.6,
+                    style="quantile") +
+            tm_view(set.zoom.limits = c(11,14))
+        })
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_forward_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_fw_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Forware model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_forward_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_fw_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_forward_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_fw_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_forward_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_fw_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_forward_normality_plot <- renderPlot({
+          plot(check_normality(rental_fw_mlr$model))
+        })
+        output$performance_forward_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_fw_mlr$model,
+                              method = "pareto"))
+        })
+        
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_backward_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_bw_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Backward model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_backward_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_bw_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_backward_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_bw_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_backward_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_bw_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_backward_normality_plot <- renderPlot({
+          plot(check_normality(rental_bw_mlr$model))
+        })
+        output$performance_backward_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_bw_mlr$model,
+                              method = "pareto"))
+        })
+        
+      }
+    }
+    else if (input$mlr_tabs == "mlr_rd_performance_both_tab" ) {
+      # Disable the button while processing
+      shinyjs::disable("MLRSubmit")  # Disable the button
+      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      
+      # Check if the data needed is null or not
+      if (is.null(rental_bi_mlr)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the Stepwise Both model at least once, in the Stepwise Method Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$performance_both_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(check_collinearity(rental_bi_mlr$model)), collapse = "\n")
+          return(result)
+        })
+        
+        output$performance_both_multicollinearity_plot <- renderPlot({
+          plot(check_collinearity(rental_bi_mlr$model)) +
+            # theme is used to make the display the column name more friendly
+            theme(axis.text.x = element_text (
+              angle = 45, hjust = 1
+            ))
+        })
+        
+        output$performance_both_non_linearity_plot <- renderPlot({
+          out <- plot(check_model(rental_bi_mlr$model,
+                                  panel = FALSE))
+          out[[2]] # have 6 plot
+        })
+        output$performance_both_normality_plot <- renderPlot({
+          plot(check_normality(rental_bi_mlr$model))
+        })
+        output$performance_both_outlier_plot <- renderPlot({
+          plot(check_outliers(rental_bi_mlr$model,
+                              method = "pareto"))
+        })
+        
+      }
+    }
+  })
+  
   
   #==========================================================
   # GWR
@@ -737,8 +1285,6 @@ server <- function(input, output) {
         shinyjs::runjs("$('#GWRSubmit').text('Submit');")  # Reset text to 'Submit'
         return(result)
       })
-      
-      
     } else {
       output$gwr_local_r2_plot <- renderTmap({
         gwrResult()
@@ -749,10 +1295,10 @@ server <- function(input, output) {
         shinyjs::runjs("$('#GWRSubmit').css('border-color', '#007BFF');")  # Original border color
         shinyjs::runjs("$('#GWRSubmit').text('Submit');")  # Reset text to 'Submit'
       })
-  
     }
   }
   
+  # Based on the current active tab, build the model and load the output
   observeEvent(input$GWRSubmit, {
     # Detect the active tab
     active_tab <- input$gwr_tabs
@@ -774,16 +1320,15 @@ server <- function(input, output) {
   #=======================
   # Observe GWR Tab change
   #=======================
+  # reload the ooutput everytime
   observeEvent(input$gwr_tabs, {
     if (input$gwr_tabs == "gwr_model_info_tab") {
-      print("reloading model data for info")
       output$gwr_model_info <- renderText({
         result <-  paste(capture.output(gwr_model), collapse = "\n")
         return(result)
       })
     }else {
       output$gwr_local_r2_plot <- renderTmap({
-        print("reloading model data for r2 tmap")
         loadLocalR2Tmap(gwr_model)
       })
     }
