@@ -120,12 +120,12 @@ ui <- navbarPage(
       )
     ),
     #==========================================================
-    # Chloropleth Map
+    # Choropleth Map
     #==========================================================
-    tabPanel("Chloropleth Map", sidebarLayout(
+    tabPanel("Choropleth Map", sidebarLayout(
       sidebarPanel(
         selectInput(
-          inputId = "chloro_plot_variable",
+          inputId = "choro_plot_variable",
           label = "Select Plot Variable",
           choices = c("Median Rent" = "median_rent", "Count of Rented Flats" = "rented_count"),
           selected = "median_rent"
@@ -139,7 +139,7 @@ ui <- navbarPage(
           selected = '2024 Jan to Sep'
         ),
         radioButtons(
-          inputId = "chloro_flat_type",
+          inputId = "choro_flat_type",
           label = "Select Flat Type",
           choices = sort(unique(rental_sf$flat_type)),
           selected = sort(unique(rental_sf$flat_type))[1],
@@ -147,12 +147,12 @@ ui <- navbarPage(
         )
       ),
       mainPanel(
-        tmapOutput("chloropleth", width = "100%", height = "600px"),
+        tmapOutput("choropleth", width = "100%", height = "600px"),
         tags$div(style = "margin-top: 20px;"),
         wellPanel(
-          uiOutput("chloro_stats_title"),
+          uiOutput("choro_stats_title"),
           # Output for dynamic title
-          tableOutput("chloro_statistics")
+          tableOutput("choro_statistics")
         )
       )
     )),
@@ -620,23 +620,23 @@ server <- function(input, output) {
   
   
   # FOR CHLORO SUMMARY STAT
-  chloro_summary_statistics <- reactive({
-    data <- calculate_chloropleth_data()  # Get grouped data
-    filtered_data <- chloro_filtered_data()  # Get filtered data
-    calculate_summary_statistics(data, input$chloro_plot_variable, filtered_data)  # Call the function with the filtered data
+  choro_summary_statistics <- reactive({
+    data <- calculate_choropleth_data()  # Get grouped data
+    filtered_data <- choro_filtered_data()  # Get filtered data
+    calculate_summary_statistics(data, input$choro_plot_variable, filtered_data)  # Call the function with the filtered data
   })
   
-  output$chloro_statistics <- renderTable({
-    chloro_summary_statistics()  # This remains unchanged
+  output$choro_statistics <- renderTable({
+    choro_summary_statistics()  # This remains unchanged
   }, striped = TRUE, hover = TRUE, bordered = TRUE)
   
-  output$chloro_stats_title <- renderUI({
-    req(input$chloro_plot_variable, input$flat_type, input$month)  # Ensure all inputs are available
+  output$choro_stats_title <- renderUI({
+    req(input$choro_plot_variable, input$flat_type, input$month)  # Ensure all inputs are available
     
     # Construct the dynamic title with smaller font for Flat Type and Month
     title_text <- paste(
       "Summary Statistics for:",
-      input$chloro_plot_variable,
+      input$choro_plot_variable,
       "<br><span style='font-size: 0.85em; color: #555;'><strong>Flat Type:</strong> ",
       input$flat_type,
       "| <strong>Month:</strong> ",
@@ -751,10 +751,10 @@ server <- function(input, output) {
   
   
   #==========================================================
-  # Chloropleth Map
+  # Choropleth Map
   #==========================================================
-  chloro_filtered_data <- reactive({
-    req(input$chloro_flat_type, input$month)  # Ensure inputs are available
+  choro_filtered_data <- reactive({
+    req(input$choro_flat_type, input$month)  # Ensure inputs are available
     rental_sf %>%
       mutate(
         town = if_else(town == 'KALLANG/WHAMPOA', 'KALLANG', town),
@@ -766,11 +766,11 @@ server <- function(input, output) {
       } else {
         format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
       }) %>%
-      filter(flat_type == input$chloro_flat_type)
+      filter(flat_type == input$choro_flat_type)
   })
   
-  calculate_chloropleth_data <- reactive({
-    data <- chloro_filtered_data()
+  calculate_choropleth_data <- reactive({
+    data <- choro_filtered_data()
     
     data_summary <- data %>%
       group_by(town) %>%
@@ -787,20 +787,20 @@ server <- function(input, output) {
     return(data_summary)  # Return the data_summary
   })
   
-  output$chloropleth <- renderTmap({
-    # Get chloropleth_data
-    chloropleth_data <- calculate_chloropleth_data()
+  output$choropleth <- renderTmap({
+    # Get choropleth_data
+    choropleth_data <- calculate_choropleth_data()
     
-    if (nrow(chloropleth_data) == 0) {
+    if (nrow(choropleth_data) == 0) {
       return(NULL)  # Return NULL if there is no data to plot
     }
     
-    if (input$chloro_plot_variable == "rented_count") {
+    if (input$choro_plot_variable == "rented_count") {
       tmap_mode("view")
-      qtm(chloropleth_data, fill = "rented_count")
-    } else if (input$chloro_plot_variable == "median_rent") {
+      qtm(choropleth_data, fill = "rented_count")
+    } else if (input$choro_plot_variable == "median_rent") {
       tmap_mode("view")
-      qtm(chloropleth_data, fill = "median_rent")
+      qtm(choropleth_data, fill = "median_rent")
     }
   })
   #==========================================================
