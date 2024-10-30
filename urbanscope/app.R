@@ -24,6 +24,16 @@ gwr_model <- read_rds('data/rds/gwr_adaptive.rds')
 
 categorical_cols <- c("town", "rent_approval_date", "flat_type", "region")
 
+# Geospatial Data Import
+kindergarten_sf <- read_rds('data/rds/geospatial/kindergarten_sf.rds')
+childcare_sf <- read_rds('data/rds/geospatial/childcare_sf.rds')
+hawker_sf <- read_rds('data/rds/geospatial/hawker_sf.rds')
+busstop_sf <- read_rds('data/rds/geospatial/busstop_sf.rds')
+shoppingmall_sf <- read_rds('data/rds/geospatial/shoppingmall_sf.rds')
+mrt_sf <- read_rds('data/rds/geospatial/mrt_sf.rds')
+primarysch_sf <- read_rds('data/rds/geospatial/primarysch_sf.rds')
+cbd_sf <- read_rds('data/rds/geospatial/cbd_sf.rds')
+
 # Define a global variable to store MLR results
 mlr_model_result <- NULL
 rental_fw_mlr <- NULL
@@ -66,17 +76,18 @@ ui <- navbarPage(
                 )),
                 selected = '2024 Jan to Sep'
               ),
-              selectInput(
+              radioButtons(
                 inputId = "flat_type",
-                label = "Flat Type",
+                label = "Select Flat Type",
                 choices = sort(unique(rental_sf$flat_type)),
-                selected = sort(unique(rental_sf$flat_type))[1]
+                selected = sort(unique(rental_sf$flat_type))[1],
+                inline = TRUE
               ),
               selectInput(
                 inputId = "town",
                 label = "Town",
-                choices = sort(unique(rental_sf$town)),
-                selected = sort(unique(rental_sf$town))[1]
+                choices = c("All of Singapore"='all',sort(unique(rental_sf$town))),
+                selected = 'all'
               ),
               sliderInput(
                 inputId = "bin_number",
@@ -98,13 +109,6 @@ ui <- navbarPage(
                 label = "Select Y Variable",
                 choices = c("Frequency" = "frequency", "Median Rent" = "median_rent") # You can add other variables as needed
               )
-              # radioButtons(
-              #   inputId = "flat_type_radio",
-              #  label = "Select Flat Type",
-              # choices = sort(unique(rental_sf$flat_type)),
-              #  selected = sort(unique(rental_sf$flat_type))[1],
-              # inline = TRUE
-              #)
             )
           )
         ),
@@ -134,15 +138,16 @@ ui <- navbarPage(
           )),
           selected = '2024 Jan to Sep'
         ),
-        selectInput(
-          inputId = "flat_type",
-          label = "Flat Type",
+        radioButtons(
+          inputId = "chloro_flat_type",
+          label = "Select Flat Type",
           choices = sort(unique(rental_sf$flat_type)),
-          selected = sort(unique(rental_sf$flat_type))[1]
+          selected = sort(unique(rental_sf$flat_type))[1],
+          inline = TRUE
         )
       ),
       mainPanel(
-        tmapOutput("chloropleth", width = "100%", height = 580),
+        tmapOutput("chloropleth", width = "100%", height = "600px"),
         tags$div(style = "margin-top: 20px;"),
         wellPanel(
           uiOutput("chloro_stats_title"),
@@ -167,9 +172,34 @@ ui <- navbarPage(
           "Select Y Variable",
           choices = setdiff(colnames(rental_sf), c("geometry", categorical_cols)),
           selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[2]  # Select a different column for Y by default
-        )
+        ),
+        # UI
+        selectInput("point_color", "Choose Point Color:", choices = colors(), selected = "blue"),
+        sliderInput("point_size", "Point Size:", min = 1, max = 5, value = 2),
+        checkboxInput("add_smooth", "Add Smoothing Line", value = FALSE)
       ),
       mainPanel(plotlyOutput("scatter_plot"))
+    )),
+    #==========================================================
+    # Locations of Interest
+    #==========================================================
+    tabPanel("Locations of Interest", sidebarLayout(
+      sidebarPanel(
+        selectInput("dataset", "Select Dataset:",
+                    choices = c("Kindergarten" = "kindergarten_sf",
+                                "Childcare" = "childcare_sf",
+                                "Hawker" = "hawker_sf",
+                                "Bus Stop" = "busstop_sf",
+                                "Shopping Mall" = "shoppingmall_sf",
+                                "MRT" = "mrt_sf",
+                                "Primary School" = "primarysch_sf",
+                                "CBD" = "cbd_sf")),
+        conditionalPanel(
+          condition = "input.dataset != 'cbd_sf'",
+          selectInput("locationTown", "Select Town:",
+                      choices = c("All of Singapore"='all', sort(unique(mpsz_sf$PLN_AREA_N)))))
+      ),
+      mainPanel(tmapOutput('locationMap', width = "100%", height = "600px"))
     ))
   ),
   #==========================================================
@@ -643,8 +673,8 @@ server <- function(input, output) {
       } else {
         format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
       }) %>%
-      filter(flat_type == input$flat_type) %>%
-      filter(town == input$town)
+      filter(flat_type == input$flat_type)%>%
+      filter(if (input$town == "all") TRUE else town == input$town) # Don't filter if town is set to all
     
   })
   
@@ -724,7 +754,7 @@ server <- function(input, output) {
   # Chloropleth Map
   #==========================================================
   chloro_filtered_data <- reactive({
-    req(input$flat_type, input$month)  # Ensure inputs are available
+    req(input$chloro_flat_type, input$month)  # Ensure inputs are available
     rental_sf %>%
       mutate(
         town = if_else(town == 'KALLANG/WHAMPOA', 'KALLANG', town),
@@ -736,7 +766,7 @@ server <- function(input, output) {
       } else {
         format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
       }) %>%
-      filter(flat_type == input$flat_type)
+      filter(flat_type == input$chloro_flat_type)
   })
   
   calculate_chloropleth_data <- reactive({
@@ -774,7 +804,7 @@ server <- function(input, output) {
     }
   })
   #==========================================================
-  # Scatterplot: TBD
+  # Scatterplot
   #==========================================================
   output$scatter_plot <- renderPlotly({
     req(input$scatter_x, input$scatter_y)  # Ensure x and y inputs are selected
@@ -782,7 +812,7 @@ server <- function(input, output) {
     # Build the scatter plot
     p <- ggplot(rental_sf,
                 aes_string(x = input$scatter_x, y = input$scatter_y)) +
-      geom_point(color = "blue", size = 2) +
+      geom_point(color = input$point_color, size = input$point_size) +
       labs(
         title = paste("Scatterplot of", input$scatter_x, "vs", input$scatter_y),
         x = input$scatter_x,
@@ -790,9 +820,46 @@ server <- function(input, output) {
       ) +
       theme_minimal()  # Optional, for cleaner aesthetics
     
-    ggplotly(p)  # Convert ggplot to interactive Plotly plot
-  })
+    if (input$add_smooth) {
+      p <- p + geom_smooth(method = "lm", color = "red", se = FALSE)  # Linear regression line
+    }
+    
+    ggplotly(p, height = 600)
+    
+    })
   
+  #==========================================================
+  # Locations of Interest
+  #==========================================================
+  
+  output$locationMap <- renderTmap({
+    req(input$dataset, input$locationTown)  # Ensure a dataset is selected
+    
+    # Dynamically select the dataset based on input
+    data_to_plot <- switch(input$dataset,
+                           "kindergarten_sf" = kindergarten_sf,
+                           "childcare_sf" = childcare_sf,
+                           "hawker_sf" = hawker_sf,
+                           "busstop_sf" = busstop_sf,
+                           "shoppingmall_sf" = shoppingmall_sf,
+                           "mrt_sf" = mrt_sf,
+                           "primarysch_sf" = primarysch_sf,
+                           "cbd_sf" = cbd_sf)
+    # Filter for town boundaries in mpsz_sf
+    if(input$locationTown != 'all' && input$dataset != "cbd_sf"){
+      specific_town_sf <- mpsz_sf %>% filter(PLN_AREA_N == input$locationTown)
+      
+      # Performing a spatial intersection
+      data_to_plot <- st_intersection(data_to_plot, specific_town_sf)
+    }
+    tmap_options(check.and.fix = TRUE)
+
+    # Render the map with the selected dataset
+    tmap_mode("view")
+    tm_shape(data_to_plot) +
+      tm_dots(col = "red")
+  })
+
   
   #==========================================================
   # Correlation Matrix
