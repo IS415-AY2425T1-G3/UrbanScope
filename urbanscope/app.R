@@ -69,7 +69,7 @@ ui <- navbarPage(
                 selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[1]
               ),
               selectInput(
-                inputId = "month",
+                inputId = "histo_month",
                 label = "Month",
                 choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
                   format(rental_sf$rent_approval_date, "%Y %b")
@@ -77,20 +77,20 @@ ui <- navbarPage(
                 selected = '2024 Jan to Sep'
               ),
               radioButtons(
-                inputId = "flat_type",
+                inputId = "histo_flat_type",
                 label = "Select Flat Type",
                 choices = sort(unique(rental_sf$flat_type)),
                 selected = sort(unique(rental_sf$flat_type))[1],
                 inline = TRUE
               ),
               selectInput(
-                inputId = "town",
+                inputId = "histo_town",
                 label = "Town",
                 choices = c("All of Singapore"='all',sort(unique(rental_sf$town))),
                 selected = 'all'
               ),
               sliderInput(
-                inputId = "bin_number",
+                inputId = "histo_bin_number",
                 label = "Number of Bins",
                 min = 5,
                 max = 20,
@@ -131,7 +131,7 @@ ui <- navbarPage(
           selected = "median_rent"
         ),
         selectInput(
-          inputId = "month",
+          inputId = "choro_month",
           label = "Month",
           choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
             format(rental_sf$rent_approval_date, "%Y %b")
@@ -173,10 +173,31 @@ ui <- navbarPage(
           choices = setdiff(colnames(rental_sf), c("geometry", categorical_cols)),
           selected = setdiff(colnames(rental_sf), c("geometry", categorical_cols))[2]  # Select a different column for Y by default
         ),
+        selectInput(
+          inputId = "scatter_month",
+          label = "Month",
+          choices = c('2024 Jan to Sep' = '2024 Jan to Sep', unique(
+            format(rental_sf$rent_approval_date, "%Y %b")
+          )),
+          selected = '2024 Jan to Sep'
+        ),
+        selectInput(
+          inputId = "scatter_town",
+          label = "Town",
+          choices = c("All of Singapore"='all',sort(unique(rental_sf$town))),
+          selected = 'all'
+        ),
+        radioButtons(
+          inputId = "scatter_flat_type",
+          label = "Select Flat Type",
+          choices = sort(unique(rental_sf$flat_type)),
+          selected = sort(unique(rental_sf$flat_type))[1],
+          inline = TRUE
+        ),
         # UI
-        selectInput("point_color", "Choose Point Color:", choices = colors(), selected = "blue"),
-        sliderInput("point_size", "Point Size:", min = 1, max = 5, value = 2),
-        checkboxInput("add_smooth", "Add Smoothing Line", value = FALSE)
+        selectInput("scatter_point_color", "Choose Point Color:", choices = colors(), selected = "blue"),
+        sliderInput("scatter_point_size", "Point Size:", min = 1, max = 5, value = 2),
+        checkboxInput("scatter_add_smooth", "Add Smoothing Line", value = FALSE)
       ),
       mainPanel(plotlyOutput("scatter_plot"))
     )),
@@ -631,16 +652,16 @@ server <- function(input, output) {
   }, striped = TRUE, hover = TRUE, bordered = TRUE)
   
   output$choro_stats_title <- renderUI({
-    req(input$choro_plot_variable, input$flat_type, input$month)  # Ensure all inputs are available
+    req(input$choro_plot_variable, input$choro_flat_type, input$choro_month)  # Ensure all inputs are available
     
     # Construct the dynamic title with smaller font for Flat Type and Month
     title_text <- paste(
       "Summary Statistics for:",
       input$choro_plot_variable,
       "<br><span style='font-size: 0.85em; color: #555;'><strong>Flat Type:</strong> ",
-      input$flat_type,
+      input$choro_flat_type,
       "| <strong>Month:</strong> ",
-      input$month,
+      input$choro_month,
       "</span>"
     )
     
@@ -660,21 +681,23 @@ server <- function(input, output) {
   output$histo_statistics <- renderTable({
     histo_summary_statistics()  # This remains unchanged
   }, striped = TRUE, hover = TRUE, bordered = TRUE)
+  
+  
   #==========================================================
   # Histogram / Barplot
   #==========================================================
   # Only for continuous mode
   histo_filtered_data <- reactive({
-    req(input$flat_type, input$month, input$town)  # Ensure inputs are available
+    req(input$histo_flat_type, input$histo_month, input$histo_town)  # Ensure inputs are available
     rental_sf %>%
       mutate(year_month = format(rent_approval_date, "%Y %b")) %>%
-      filter (if (input$month == "2024 Jan to Sep") {
+      filter (if (input$histo_month == "2024 Jan to Sep") {
         TRUE  # No additional filtering by month
       } else {
-        format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
+        format(rent_approval_date, "%Y %b") == input$histo_month  # Filter by selected year-month
       }) %>%
-      filter(flat_type == input$flat_type)%>%
-      filter(if (input$town == "all") TRUE else town == input$town) # Don't filter if town is set to all
+      filter(flat_type == input$histo_flat_type)%>%
+      filter(if (input$histo_town == 'all') TRUE else town == input$histo_town) # Don't filter if town is set to all
     
   })
   
@@ -698,7 +721,7 @@ server <- function(input, output) {
       p <- ggplot(histo_filtered_data(),
                   aes_string(x = input$histo_plot_variable)) +
         geom_histogram(
-          bins = input$bin_number,
+          bins = input$histo_bin_number,
           fill = "blue",
           color = "black"
         ) +
@@ -754,17 +777,17 @@ server <- function(input, output) {
   # Choropleth Map
   #==========================================================
   choro_filtered_data <- reactive({
-    req(input$choro_flat_type, input$month)  # Ensure inputs are available
+    req(input$choro_flat_type, input$choro_month)  # Ensure inputs are available
     rental_sf %>%
       mutate(
         town = if_else(town == 'KALLANG/WHAMPOA', 'KALLANG', town),
         year_month = format(rent_approval_date, "%Y %b")
       ) %>%
       filter(town != "CENTRAL") %>%
-      filter (if (input$month == "2024 Jan to Sep") {
-        TRUE  # No additional filtering by month
+      filter (if (input$choro_month == "2024 Jan to Sep") {
+        TRUE  # No additional filtering by choro_month
       } else {
-        format(rent_approval_date, "%Y %b") == input$month  # Filter by selected year-month
+        format(rent_approval_date, "%Y %b") == input$choro_month  # Filter by selected year-month
       }) %>%
       filter(flat_type == input$choro_flat_type)
   })
@@ -806,13 +829,29 @@ server <- function(input, output) {
   #==========================================================
   # Scatterplot
   #==========================================================
-  output$scatter_plot <- renderPlotly({
-    req(input$scatter_x, input$scatter_y)  # Ensure x and y inputs are selected
+  
+  scatter_filtered_data <- reactive({
+    req(input$scatter_flat_type, input$scatter_month, input$scatter_town)  # Ensure inputs are available
+    rental_sf %>%
+      mutate(year_month = format(rent_approval_date, "%Y %b")) %>%
+      filter (if (input$scatter_month == "2024 Jan to Sep") {
+        TRUE  # No additional filtering by month
+      } else {
+        format(rent_approval_date, "%Y %b") == input$scatter_month  # Filter by selected year-month
+      }) %>%
+      filter(flat_type == input$scatter_flat_type)%>%
+      filter(if (input$scatter_town == 'all') TRUE else town == input$scatter_town) # Don't filter if town is set to all
     
+  })
+  
+  output$scatter_plot <- renderPlotly({
+    req(input$scatter_x, input$scatter_y, input$scatter_flat_type, input$scatter_month, input$scatter_point_color, input$scatter_point_size)
+    
+
     # Build the scatter plot
-    p <- ggplot(rental_sf,
+    p <- ggplot(scatter_filtered_data(),
                 aes_string(x = input$scatter_x, y = input$scatter_y)) +
-      geom_point(color = input$point_color, size = input$point_size) +
+      geom_point(color = input$scatter_point_color, size = input$scatter_point_size) +
       labs(
         title = paste("Scatterplot of", input$scatter_x, "vs", input$scatter_y),
         x = input$scatter_x,
@@ -820,7 +859,7 @@ server <- function(input, output) {
       ) +
       theme_minimal()  # Optional, for cleaner aesthetics
     
-    if (input$add_smooth) {
+    if (input$scatter_add_smooth) {
       p <- p + geom_smooth(method = "lm", color = "red", se = FALSE)  # Linear regression line
     }
     
