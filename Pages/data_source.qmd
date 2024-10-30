@@ -1,0 +1,18 @@
+---
+title: "Data Sources"
+execute: 
+  eval: true
+  echo: true
+  freeze: true
+---
+
+Below are the data sources utilised in this project:
+
+| Datasets                                        | Source                                                                                                                                          |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| Singapore Rental Flat Prices (Jan-17 to Sep-24) | data.gov.sg                                                                                                                                     |
+| Master Plan 2014 Subzone Boundary (Web)         | data.gov.sg                                                                                                                                     |
+| Hawker Centres Dataset                          | [data.gov.sg](https://data.gov.sg/datasets?formats=GEOJSON%7CKML%7CSHP%7CKMZ&sort=relevancy&page=1&resultId=d_4a086da0a5553be1d89383cd90d07ecd) |
+| Kindergarten, Childcare, Primary School Dataset | [OneMap API](https://www.onemap.gov.sg/apidocs/)                                                                                                |
+| Bus Stops Location, MRT/ LRT Locations          | [LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html)                                                           |
+| Shopping Malls Coordinates                      | Through Wikipedia and webscraping with the coordinates retrieved through OneMap API                                                             |

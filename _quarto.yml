@@ -7,13 +7,22 @@ website:
     left:
     - text: "Project Proposal"
       href: "Proposal/proposal.qmd"
+    - text: "Poster"
+      href: "Pages/poster.qmd"
+    - text: "Shiny App"
+      href: "https://www.youtube.com"  # add actual link to shiny app after hosted
+      target: "_blank"
+    - text: "User Guide"
+      href: "Pages/user_guide.qmd"
+    - text: "Data Sources"
+      href: "Pages/data_source.qmd"
       
     right:
       - about.qmd
 
 format:
   html:
-    theme: cosmo
+    theme: united
     css: styles.css
     toc: true
 

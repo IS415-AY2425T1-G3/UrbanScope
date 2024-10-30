@@ -51,7 +51,7 @@ The project aims to deliver a Shiny app that provides:
 
 ## 5.1 Exploratory Data Analysis
 
-![](images/EDA-02.png)
+![](images/clipboard-1829432061.png)
 
 ## 5.2 Geographically Weighted Regression
 

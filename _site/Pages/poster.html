@@ -6,10 +6,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="IS415 G3">
-<meta name="dcterms.date" content="2024-10-10">
 
-<title>UrbanScope - Project Proposal</title>
+<title>UrbanScope</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -91,11 +89,11 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="../Proposal/proposal.html" aria-current="page"> 
+    <a class="nav-link" href="../Proposal/proposal.html"> 
 <span class="menu-text">Project Proposal</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../Pages/poster.html"> 
+    <a class="nav-link active" href="../Pages/poster.html" aria-current="page"> 
 <span class="menu-text">Poster</span></a>
   </li>  
   <li class="nav-item">
@@ -128,114 +126,16 @@ ul.task-list li input[type="checkbox"] {
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#abstract" id="toc-abstract" class="nav-link active" data-scroll-target="#abstract">1. Abstract</a></li>
-  <li><a href="#motivation" id="toc-motivation" class="nav-link" data-scroll-target="#motivation">2. Motivation</a></li>
-  <li><a href="#project-objectives" id="toc-project-objectives" class="nav-link" data-scroll-target="#project-objectives">3. Project Objectives</a></li>
-  <li><a href="#proposed-scope-and-methodology" id="toc-proposed-scope-and-methodology" class="nav-link" data-scroll-target="#proposed-scope-and-methodology">4. Proposed Scope and Methodology</a></li>
-  <li><a href="#main-features" id="toc-main-features" class="nav-link" data-scroll-target="#main-features">5. Main Features</a>
-  <ul class="collapse">
-  <li><a href="#exploratory-data-analysis" id="toc-exploratory-data-analysis" class="nav-link" data-scroll-target="#exploratory-data-analysis">5.1 Exploratory Data Analysis</a></li>
-  <li><a href="#geographically-weighted-regression" id="toc-geographically-weighted-regression" class="nav-link" data-scroll-target="#geographically-weighted-regression">5.2 Geographically Weighted Regression</a></li>
-  <li><a href="#data-table" id="toc-data-table" class="nav-link" data-scroll-target="#data-table">5.3 Data Table</a></li>
-  </ul></li>
-  </ul>
-</nav>
+        
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Project Proposal</h1>
-</div>
 
 
 
-<div class="quarto-title-meta">
-
-    <div>
-    <div class="quarto-title-meta-heading">Author</div>
-    <div class="quarto-title-meta-contents">
-             <p>IS415 G3 </p>
-          </div>
-  </div>
-    
-    <div>
-    <div class="quarto-title-meta-heading">Published</div>
-    <div class="quarto-title-meta-contents">
-      <p class="date">October 10, 2024</p>
-    </div>
-  </div>
-  
-    <div>
-    <div class="quarto-title-meta-heading">Modified</div>
-    <div class="quarto-title-meta-contents">
-      <p class="date-modified">October 31, 2024</p>
-    </div>
-  </div>
-    
-  </div>
-  
 
 
-</header>
-
-
-<section id="abstract" class="level1">
-<h1>1. Abstract</h1>
-<p>In this R Shiny application, we analyze the rental prices of <strong>flats</strong> in Singapore using <strong>Geographically Weighted Regression (GWR)</strong>. This analysis aims to predict and examine the spatial dynamics of rental prices, primarily focusing on the influence of factors such as proximity to transportation hubs. By examining how predictors like access to public transportation and neighborhood characteristics affect rental prices across various towns, we hope to facilitate more informed decision-making in the context of Singapore’s unique urban landscape. This application will provide a visual representation of rental price dynamics and serve as a valuable tool for individuals considering where to rent a flat.</p>
-</section>
-<section id="motivation" class="level1">
-<h1>2. Motivation</h1>
-<p>Recent MRT service breakdowns in Singapore have highlighted the importance of transportation accessibility for housing. This situation, combined with the rising influx of expats seeking rental housing, has intensified competition for well-located flats. As access to reliable public transport becomes a pivotal factor for potential renters, understanding its influence on rental prices is more critical than ever.</p>
-<p>With this project, we aim to provide individuals looking to rent a flat with a better understanding of how transportation accessibility and other local factors affect rental prices. By leveraging Geographically Weighted Regression (GWR), our analysis will help prospective renters make informed decisions, ultimately improving their housing choices in Singapore’s dynamic urban landscape.</p>
-</section>
-<section id="project-objectives" class="level1">
-<h1>3. Project Objectives</h1>
-<p>The project aims to deliver a Shiny app that provides:</p>
-<ul>
-<li><p>Interactive UI design.</p></li>
-<li><p>Exploratory Data Analysis (EDA)</p></li>
-<li><p>Geographically Weighted Regression (GWR) Models using different models, such as Hedonic Pricing model, Linear Regression with Spatial lag etc.</p></li>
-<li><p>Predicting Rental Prices with GWR by entering the location.<br>
-</p></li>
-</ul>
-</section>
-<section id="proposed-scope-and-methodology" class="level1">
-<h1>4. Proposed Scope and Methodology</h1>
-<ol type="1">
-<li><p>Dataset Preparation</p>
-<ul>
-<li><p><strong>Rental Price Data</strong>: Include details such as rental price, property type, and property size.</p></li>
-<li><p><strong>Public Transport Data</strong>: Geospatial data of <strong>MRT station locations</strong> and <strong>bus stop locations</strong>.</p></li>
-<li><p><strong>Other Potential Variables</strong>: Distance to amenities, proximity to business districts, and neighborhood characteristics.</p></li>
-</ul></li>
-<li><p>Conduct <strong>EDA</strong> to understand the dataset’s structure, distributions, and potential relationships between variables.</p></li>
-<li><p>Develop a <strong>Geographically Weighted Regression (GWR)</strong> model to account for spatial variability in relationships between rental prices and influencing factors.</p></li>
-<li><p>Implement <strong>Geographically Weighted Predictive Models</strong> to allow users to input location-based data and obtain predicted rental prices.</p></li>
-</ol>
-</section>
-<section id="main-features" class="level1">
-<h1>5. Main Features</h1>
-<section id="exploratory-data-analysis" class="level2">
-<h2 class="anchored" data-anchor-id="exploratory-data-analysis">5.1 Exploratory Data Analysis</h2>
-<p><img src="images/clipboard-1829432061.png" class="img-fluid"></p>
-</section>
-<section id="geographically-weighted-regression" class="level2">
-<h2 class="anchored" data-anchor-id="geographically-weighted-regression">5.2 Geographically Weighted Regression</h2>
-<p><img src="images/GWR-01.png" class="img-fluid"></p>
-</section>
-<section id="data-table" class="level2">
-<h2 class="anchored" data-anchor-id="data-table">5.3 Data Table</h2>
-<p><img src="images/Data Table.png" class="img-fluid"></p>
-
-
-</section>
-</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
