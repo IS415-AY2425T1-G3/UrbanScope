@@ -16,7 +16,10 @@ pacman::p_load(
   DT,
   shinycssloaders,
   shinyjs,
-  shinyalert
+  shinyalert,
+  leaflet,
+  ranger,
+  SpatialML
 )
 
 rental_sf <- read_rds('data/rds/rental_sf.rds')
@@ -34,6 +37,11 @@ shoppingmall_sf <- read_rds('data/rds/geospatial/shoppingmall_sf.rds')
 mrt_sf <- read_rds('data/rds/geospatial/mrt_sf.rds')
 primarysch_sf <- read_rds('data/rds/geospatial/primarysch_sf.rds')
 cbd_sf <- read_rds('data/rds/geospatial/cbd_sf.rds')
+
+# Model Import
+rf_cal <- read_rds("data/rds/model/rf_cal.rds")
+rf_tuned <- read_rds("data/rds/model/rf_tuned.rds")
+gwRF_adaptive <- read_rds("data/rds/model/gwRF_adaptive.rds")
 
 # Define a global variable to store MLR results
 mlr_model_result <- NULL
@@ -572,7 +580,79 @@ ui <- navbarPage(
   #==========================================================
   # Predictive Model
   #==========================================================
-  tabPanel("Predictive Model", sidebarLayout(
+  tabPanel("Predictive Model",
+           sidebarLayout(
+             sidebarPanel(
+               selectInput("model_type", "Choose Model Type:", 
+                           choices = c("Aspatial Random Forest", "Tuned Random Forest", "Geospatial Random Forest")),
+               
+               # Conditional panel for Aspatial Model inputs
+               conditionalPanel(
+                 condition = "input.model_type != 'Geospatial Random Forest'",
+                 h4("Aspatial Model Inputs"),
+                 selectInput("flat_type", "Flat Type:", 
+                             choices = c("3-room", "4-room", "5-room"), 
+                             selected = "3-room"),
+                 sliderInput(
+                   inputId = "no_of_kindergarten_500m",
+                   label = "Number of Kindergartens within 500m:",
+                   min = 0,
+                   max = 20,
+                   value = c(1)
+                 ),
+                 sliderInput(
+                   inputId = "no_of_childcare_500m",
+                   label = "Number of Childcare Centers within 500m:",
+                   min = 0,
+                   max = 30,
+                   value = c(1)
+                 ),
+                 numericInput("prox_hawker", "Distance to Nearest Hawker Center (m):", 500),
+                 numericInput("prox_shoppingmall", "Distance to Nearest Shopping Mall (m):", 1000),
+                 numericInput("prox_mrt", "Distance to Nearest MRT Station (m):", 500),
+                 numericInput("prox_cbd", "Distance to Central Business District (CBD) (m):", 5000)
+               ),
+               
+               # Conditional panel for Geospatial Model inputs
+               conditionalPanel(
+                 condition = "input.model_type == 'Geospatial Random Forest'",
+                 h4("Geospatial Model Inputs"),
+                 selectInput("flat_type_geo", "Flat Type:", 
+                             choices = c("3-room", "4-room", "5-room"), 
+                             selected = "3-room"),
+                 sliderInput(
+                   inputId = "no_of_kindergarten_500m_geo",
+                   label = "Number of Kindergartens within 500m:",
+                   min = 0,
+                   max = 20,
+                   value = c(1)
+                 ),
+                 sliderInput(
+                   inputId = "no_of_childcare_500m_geo",
+                   label = "Number of Childcare Centers within 500m:",
+                   min = 0,
+                   max = 30,
+                   value = c(1)
+                 ),
+                 numericInput("prox_hawker_geo", "Distance to Nearest Hawker Center (m):", 500),
+                 numericInput("prox_shoppingmall_geo", "Distance to Nearest Shopping Mall (m):", 1000),
+                 numericInput("prox_mrt_geo", "Distance to Nearest MRT Station (m):", 500),
+                 numericInput("prox_cbd_geo", "Distance to Central Business District (CBD) (m):", 5000)
+               )
+             ),   
+             mainPanel(
+               conditionalPanel(
+                 condition = "input.model_type == 'Geospatial Random Forest'",
+                 h4("Select Location on Map for Coordinates"),
+                 leafletOutput("singapore_map")
+               ),
+               h3("Model Prediction Output"),
+               textOutput("prediction_result")
+             )
+           )
+  ),
+
+  tabPanel("Data Table", sidebarLayout(
     sidebarPanel(
       selectInput(
         inputId = "map_type",
@@ -585,17 +665,11 @@ ui <- navbarPage(
       ),
       tmapOutput("mapPlot", width = "100%", height = 580)
     ),
-    mainPanel(plotOutput(
+
+    mainPanel(tmapOutput(
       "mapPlot", width = "100%", height = 580
     ))
-  )),
-  #==========================================================
-  # Predictive Model
-  #==========================================================
-  tabPanel("Data Table",
-           dataTableOutput("data_table",height = "100%")
-  )
-  
+  ))
 )
 
 #========================#
@@ -1459,9 +1533,117 @@ server <- function(input, output) {
   #==========================================================
   # Predictive Model
   #==========================================================
+  # Render Singapore map for geospatial model
+  output$singapore_map <- renderLeaflet({
+    leaflet(mpsz_sf) %>%
+      addTiles() %>%
+      addPolygons(color = "blue", weight = 1, fillOpacity = 0.3) %>%
+      setView(lng = 103.8198, lat = 1.3521, zoom = 11)
+  })
   
+  # Capture x and y coordinates from map clicks
+  coords <- reactiveValues(x = NULL, y = NULL)
   
+  observeEvent(input$singapore_map_click, {
+    lng <- input$singapore_map_click$lng
+    lat <- input$singapore_map_click$lat
+    
+    # Check if the coordinates are within Singapore bounds
+    if (lng >= 103.6 && lng <= 104.1 && lat >= 1.2 && lat <= 1.5) {
+      # Create a geometry object from clicked coordinates
+      clicked_point <- st_point(c(lng, lat))
+      
+      print(clicked_point)
+      clicked_geometry <- st_sfc(clicked_point, crs = 4326)
+      print(clicked_geometry)
+      transformed_geometry <- st_transform(clicked_geometry, crs = st_crs(rental_sf))
+      print(transformed_geometry)
+      # Now convert it to a coordinate matrix or extract x and y
+      coords$x <- st_coordinates(transformed_geometry)[1, 1]  # longitude
+      coords$y <- st_coordinates(transformed_geometry)[1, 2]  # latitude
+    } else {
+      showNotification("Please select a location within Singapore.", type = "warning")
+    }
+  })
   
+  # Reactive prediction based on model choice and inputs
+  prediction <- reactive({
+    if (input$model_type == "Aspatial Random Forest" || input$model_type == "Tuned Random Forest") {
+      flat_type_value <- input$flat_type_geo
+      if (!flat_type_value %in% c("3-Room", "4-Room", "5-Room")) {
+        flat_type_value <- "3-Room"  # Set a default value if input doesn't match
+      }
+      
+      model_input <- data.frame(
+        flat_type = factor(flat_type_value, 
+                           levels = c("3-Room", "4-Room", "5-Room")),
+        no_of_kindergarten_500m = input$no_of_kindergarten_500m,
+        no_of_childcare_500m = input$no_of_childcare_500m,
+        prox_hawker = input$prox_hawker,
+        prox_shoppingmall = input$prox_shoppingmall,
+        prox_mrt = input$prox_mrt,
+        prox_cbd = input$prox_cbd
+      )
+      
+      if (input$model_type == "Aspatial Random Forest") {
+        # Ensure rf_cal is loaded and a valid ranger model
+        return(round(predict(rf_cal, data = model_input)$predictions, 2))
+      } else {
+        # Ensure rf_tuned is loaded and a valid ranger model
+        return(round(predict(rf_tuned, data = model_input)$predictions, 2))
+      }
+      
+    } else if (input$model_type == "Geospatial Random Forest") {
+      # Check if coordinates are selected
+      if (is.null(coords$x) || is.null(coords$y)) {
+        return("Please select a location on the map to get coordinates.")
+      }
+      
+      # Prepare the input data with default level handling for flat_type
+      flat_type_value <- input$flat_type_geo
+      if (!flat_type_value %in% c("3-Room", "4-Room", "5-Room")) {
+        flat_type_value <- "3-Room"  # Set a default value if input doesn't match
+      }
+      
+      # Prepare the input data
+      model_input_geo <- data.frame(
+        flat_type = factor(flat_type_value, 
+                           levels = c("3-Room", "4-Room", "5-Room")),
+        no_of_kindergarten_500m = input$no_of_kindergarten_500m_geo,
+        no_of_childcare_500m = input$no_of_childcare_500m_geo,
+        prox_hawker = input$prox_hawker_geo,
+        prox_shoppingmall = input$prox_shoppingmall_geo,
+        prox_mrt = input$prox_mrt_geo,
+        prox_cbd = input$prox_cbd_geo,
+        X = coords$x,
+        Y = coords$y
+      )
+      
+      # Ensure gwRF_adaptive is a valid ranger model for geospatial data
+      gwRF_adaptive_prediction <- predict.grf(
+        gwRF_adaptive, 
+        model_input_geo, 
+        x.var.name = "X", 
+        y.var.name = "Y",
+        local.w=1,
+        global.w=0
+      )
+      gwRF_adaptive_prediction <- as.data.frame(gwRF_adaptive_prediction)
+      # Debug: Print the prediction structure
+      print("Prediction Structure:")
+      print(coords)
+      print(coords$x)
+      print(coords$y)
+      # Display the prediction (assuming gwRF_adaptive_prediction is a vector)
+      return(round(as.numeric(gwRF_adaptive_prediction[[1]]), 2))
+    }
+    
+  })
+  
+  # Display prediction result
+  output$prediction_result <- renderText({
+    prediction()
+  })
   #==========================================================
   # Data Table
   #==========================================================
