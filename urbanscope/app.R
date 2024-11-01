@@ -13,6 +13,7 @@ pacman::p_load(
   shinydashboard,
   shinythemes,
   plotly,
+  DT,
   shinycssloaders,
   shinyjs,
   shinyalert
@@ -508,6 +509,30 @@ ui <- navbarPage(
           choices = c("Adaptive" = "TRUE", "Fixed" = "FALSE"),
           selected = "TRUE"
         ),
+        conditionalPanel(
+          condition = "input.gwr_adaptive == 'TRUE'",
+          sliderInput(
+            inputId = "gwr_adaptive_bw",
+            label = "Select Bandwidth:",
+            min = 30,
+            max = 200,
+            value = 54,
+            step = 1
+          ),
+          p("Recommended bandwidth: 54", style = "color: gray; font-size: 12px;")
+        ), 
+        conditionalPanel(
+          condition = "input.gwr_adaptive == 'FALSE'",
+          sliderInput(
+            inputId = "gwr_fixed_bw",
+            label = "Select Bandwidth:",
+            min = 300,
+            max = 1000,
+            value = 450,
+            step = 1
+          ),
+          p("Recommended bandwidth: 450, too low will casue error!", style = "color: gray; font-size: 12px;")
+        ), 
         selectInput(
           inputId = "gwr_kernel",
           label = "Kernel",
@@ -564,23 +589,12 @@ ui <- navbarPage(
       "mapPlot", width = "100%", height = 580
     ))
   )),
-  tabPanel("Data Table", sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "map_type",
-        label = "Select Map Type",
-        choices = c(
-          "Average Rental Price" = "avg_price",
-          "Count of Rental Flats" = "count"
-        ),
-        selected = "avg_price"
-      ),
-      tmapOutput("mapPlot", width = "100%", height = 580)
-    ),
-    mainPanel(tmapOutput(
-      "mapPlot", width = "100%", height = 580
-    ))
-  ))
+  #==========================================================
+  # Predictive Model
+  #==========================================================
+  tabPanel("Data Table",
+           dataTableOutput("data_table",height = "100%")
+  )
   
 )
 
@@ -1368,8 +1382,7 @@ server <- function(input, output) {
     output <- gwr.basic(
       formula = formula,
       data = rental_sf,
-      bw = if (as.logical(input$gwr_adaptive)) 54 else 450,    # 54 is for adaptive, 450 for Fix
-      # Based on Take Home Ex 03 for Adaptive
+      bw = if (as.logical(input$gwr_adaptive)) input$gwr_adaptive_bw else  input$gwr_fixed_bw,
       kernel = input$gwr_kernel,
       adaptive = as.logical(input$gwr_adaptive),
       longlat = as.logical(input$gwr_longlat)
@@ -1452,7 +1465,47 @@ server <- function(input, output) {
   #==========================================================
   # Data Table
   #==========================================================
-  
+  data <- data.frame(
+    Name = c("Singapore Rental Flat Prices (Jan-17 to Sep-24)",
+             "Master Plan 2014 Subzone Boundary (Web)", 
+             "Hawker Centres Dataset",
+             "Kindergarten",
+             "Childcare",
+             "Primary School",
+             "Bus Stops Location",
+             "MRT/ LRT Locations",
+             "Shopping Malls Coordinates"
+             ),
+    Source = c("data.gov.sg", 
+               "data.gov.sg",
+               "data.gov.sg",
+               "OneMap API",
+               "OneMap API",
+               "OneMap API",
+               "LTA Data Mall",
+               "LTA Data Mall",
+               "Through Wikipedia and webscraping with the coordinates retrieved through OneMap API"
+               ),
+    URL = c("https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view", 
+            "https://data.gov.sg/datasets/d_5cb80a95445f236737f6bc2bfe5f159d/view", 
+            "https://data.gov.sg/datasets?formats=GEOJSON%7CKML%7CSHP%7CKMZ&sort=relevancy&page=1&resultId=d_4a086da0a5553be1d89383cd90d07ecd",
+            "https://www.onemap.gov.sg/apidocs/",
+            "https://www.onemap.gov.sg/apidocs/",
+            "https://www.onemap.gov.sg/apidocs/",
+            "https://datamall.lta.gov.sg/content/dam/datamall/datasets/Geospatial/BusStopLocation_Jul2024.zip",
+            "https://datamall.lta.gov.sg/content/dam/datamall/datasets/Geospatial/TrainStation_Jul2024.zip",
+            "Manual Data-scrapping"
+            )
+  )
+  # Convert URLs to clickable links
+  data$URL <- ifelse(
+    grepl("^http", data$URL), 
+    paste0('<a href="', data$URL, '" target="_blank">', data$URL, '</a>'), 
+    data$URL
+  )
+  output$data_table <- renderDT({
+    datatable(data, escape = FALSE, options = list(pageLength = 10, searchHighlight = TRUE), )
+  })
   
   
   
