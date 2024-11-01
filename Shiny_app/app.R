@@ -597,7 +597,7 @@ ui <- navbarPage(
            sidebarLayout(
              sidebarPanel(
                # Input elements for user interaction can be added here
-               selectInput("model_choice", "Choose Model", 
+               selectInput("model_choice", "Choose Model Type:", 
                            choices = c("Standard RF", "Tuned RF", "Geographical RF"), selected = "Standard RF")
              ),
              
