@@ -38,6 +38,14 @@ mrt_sf <- read_rds('data/rds/geospatial/mrt_sf.rds')
 primarysch_sf <- read_rds('data/rds/geospatial/primarysch_sf.rds')
 cbd_sf <- read_rds('data/rds/geospatial/cbd_sf.rds')
 
+# Model Scatterplot Import
+rf_pred_cal <- read_rds("data/rds/model/rf_pred_cal.rds")
+rf_pred_tuned <- read_rds("data/rds/model/rf_pred_tuned.rds")
+gwRF_pred <- read_rds("data/rds/model/GRF_pred.rds")
+test_data_rpc <- read_rds("data/rds/model/test_data_rpc.rds")
+test_data_rpt <- read_rds("data/rds/model/test_data_rpt.rds")
+test_data_gp <- read_rds("data/rds/model/test_data_gp.rds")
+
 # Model Import
 rf_cal <- read_rds("data/rds/model/rf_cal.rds")
 rf_tuned <- read_rds("data/rds/model/rf_tuned.rds")
@@ -111,7 +119,7 @@ ui <- navbarPage(
               selectInput(
                 inputId = "histo_cat_plot_variable_x",
                 label = "Select X Variable",
-                choices = setdiff(categorical_cols, c('town'))
+                choices = setdiff(categorical_cols, c('town', 'rent_approval_date'))
               ),
               selectInput(
                 inputId = "histo_cat_plot_variable_y",
@@ -204,7 +212,7 @@ ui <- navbarPage(
           inline = TRUE
         ),
         # UI
-        selectInput("scatter_point_color", "Choose Point Color:", choices = colors(), selected = "blue"),
+        selectInput("scatter_point_color", "Choose Point Color:", choices = colors(), selected = "dodgerblue1"),
         sliderInput("scatter_point_size", "Point Size:", min = 1, max = 5, value = 2),
         checkboxInput("scatter_add_smooth", "Add Smoothing Line", value = FALSE)
       ),
@@ -580,7 +588,33 @@ ui <- navbarPage(
   #==========================================================
   # Predictive Model
   #==========================================================
-  tabPanel("Predictive Model",
+  navbarMenu("Predictive Model",
+       #==========================================================
+       # Scatterplot
+       #==========================================================
+       tabPanel(
+         "Scatterplot",
+           sidebarLayout(
+             sidebarPanel(
+               # Input elements for user interaction can be added here
+               selectInput("model_choice", "Choose Model", 
+                           choices = c("Standard RF", "Tuned RF", "Geographical RF"), selected = "Standard RF")
+             ),
+             
+             mainPanel(
+               h2("Random Forest Model Analysis"),
+               uiOutput("model_description"), # Dynamic model description
+               
+               # Plot output controlled by model choice
+               plotOutput("plot_rf"),
+             )
+           )
+         ),
+       #==========================================================
+       # Models
+       #==========================================================
+       tabPanel(
+         "Models",
            sidebarLayout(
              sidebarPanel(
                selectInput("model_type", "Choose Model Type:", 
@@ -641,15 +675,35 @@ ui <- navbarPage(
                )
              ),   
              mainPanel(
+               # Instructions Section
+               h3("How to Use This Page"),
+               p("This predictive model tool allows you to estimate HDB rental prices in Singapore. Select a model type from the dropdown list on the left. 
+               If you choose an Aspatial Model, provide relevant inputs in the Aspatial Model Inputs section. For the Geospatial Model, select a location on the map to set coordinates along with additional inputs."),
+               p("Once you've entered all required inputs, the predicted rental price will be displayed below."),
+               div(class = "callout-tip", style = "border-left: 5px solid #1e90ff; padding-left: 10px; margin-top: 20px;",
+                   strong("Model Selection Guidance:"),
+                   tags$ul(
+                     tags$li("Standard RF: Provides balanced accuracy and interpretability, useful for general predictions."),
+                     tags$li("Tuned RF: Optimized for scenarios where high accuracy is critical."),
+                     tags$li("Geographical RF: Ideal for predictions where spatial factors play a major role, such as in real estate.")
+                   )
+               ),
+               # Map for Geospatial model
                conditionalPanel(
                  condition = "input.model_type == 'Geospatial Random Forest'",
                  h4("Select Location on Map for Coordinates"),
                  leafletOutput("singapore_map")
                ),
-               h3("Model Prediction Output"),
-               textOutput("prediction_result")
+               
+               # Beautified Model Prediction Output
+               h4("Model Prediction Output"),
+               tags$div(
+                 style = "padding: 10px; border: 1px solid #4CAF50; border-radius: 8px; background-color: #f9f9f9; font-size: 18px; color: #333;",
+                 textOutput("prediction_result")
+                 )
+               )
              )
-           )
+         )
   ),
 
   tabPanel("Data Table", sidebarLayout(
@@ -810,7 +864,7 @@ server <- function(input, output) {
                   aes_string(x = input$histo_plot_variable)) +
         geom_histogram(
           bins = input$histo_bin_number,
-          fill = "blue",
+          fill = "#428bca",
           color = "black"
         ) +
         labs(
@@ -824,7 +878,7 @@ server <- function(input, output) {
         # Frequency plot using count
         p <- ggplot(rental_sf,
                     aes_string(x = input$histo_cat_plot_variable_x)) +
-          geom_bar(fill = "blue", color = "black") +
+          geom_bar(fill = "#428bca", color = "black") +
           labs(
             title = paste("Bar Plot of", input$histo_cat_plot_variable_x),
             x = input$histo_cat_plot_variable_x,
@@ -841,8 +895,7 @@ server <- function(input, output) {
           )
         ) +
           geom_bar(stat = "identity",
-                   fill = "blue",
-                   color = "black") +
+                   fill = "#428bca", color = "black") +
           labs(
             title = paste(
               "Bar Plot of",
@@ -1297,7 +1350,7 @@ server <- function(input, output) {
       if (is.null(rental_fw_mlr)) {
         # Display a message to ask the user to run the models first
         shinyalert(title = "Models Not Run",
-                   text = "Please ensure you run the Stepwise Forware model at least once, in the Stepwise Method Tab.",
+                   text = "Please ensure you run the Stepwise Forward model at least once, in the Stepwise Method Tab.",
                    type = "warning")
       }else { # if is not NULL, display the output
         output$performance_forward_multicollinearity_text <- renderText({
@@ -1527,9 +1580,69 @@ server <- function(input, output) {
     }
   })
   
+  #==========================================================
+  # Predictive Model Scatterplot
+  #==========================================================
+  # Dynamic model description based on selected model
+  output$model_description <- renderUI({
+    if (input$model_choice == "Standard RF") {
+      tagList(
+        h3("Random Forest (RF) Model"),
+        p("The Random Forest model provides a straightforward approach with balanced accuracy and interpretability.")
+      )
+    } else if (input$model_choice == "Tuned RF") {
+      tagList(
+        h3("Tuned Random Forest (RF with Tuned Hyperparameters)"),
+        p("The Tuned RF model improves prediction accuracy through hyperparameter adjustments.")
+      )
+    } else {
+      tagList(
+        h3("Geographical Random Forest (GRF) Model"),
+        p("The Geographical Random Forest model accounts for spatial variations, ideal for localized predictions.")
+      )
+    }
+  })
   
-  
-  
+  # Plot output based on model choice
+  output$plot_rf <- renderPlot({
+    if (input$model_choice == "Standard RF") {
+      duplicate_columns <- names(test_data_rpc)[duplicated(names(test_data_rpc))]
+      test_data_rpc <- test_data_rpc[, !duplicated(names(test_data_rpc))]
+      ggplot(data = test_data_rpc, aes(x = prediction, y = monthly_rent)) +
+        geom_point(alpha = 0.6, color = "#428bca") +
+        geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+        labs(
+          title = "Predicted Monthly Rent vs. Standard RF Predictions",
+          x = "Standard RF Predictions",
+          y = "Monthly Rent"
+        ) +
+        theme_minimal()
+    } else if (input$model_choice == "Tuned RF") {
+      duplicate_columns <- names(test_data_rpt)[duplicated(names(test_data_rpt))]
+      test_data_rpt <- test_data_rpt[, !duplicated(names(test_data_rpt))]
+      ggplot(data = test_data_rpt, aes(x = prediction, y = monthly_rent)) +
+        geom_point(alpha = 0.6, color = "#428bca") +
+        geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+        labs(
+          title = "Predicted Monthly Rent vs. Tuned RF Predictions",
+          x = "Tuned RF Predictions",
+          y = "Monthly Rent"
+        ) +
+        theme_minimal()
+    } else {
+      duplicate_columns <- names(test_data_gp)[duplicated(names(test_data_gp))]
+      test_data_gp <- test_data_gp[, !duplicated(names(test_data_gp))]
+      ggplot(data = test_data_gp, aes(x = gwRF_pred, y = monthly_rent)) +
+        geom_point(alpha = 0.6, color = "#428bca") +
+        geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+        labs(
+          title = "Predicted Monthly Rent vs. Geographically Weighted RF Predictions",
+          x = "Geographically Weighted RF Predictions",
+          y = "Monthly Rent"
+        ) +
+        theme_minimal()
+    }
+  })
   #==========================================================
   # Predictive Model
   #==========================================================
@@ -1537,7 +1650,7 @@ server <- function(input, output) {
   output$singapore_map <- renderLeaflet({
     leaflet(mpsz_sf) %>%
       addTiles() %>%
-      addPolygons(color = "blue", weight = 1, fillOpacity = 0.3) %>%
+      addPolygons(color = "#428bca", weight = 1, fillOpacity = 0.3) %>%
       setView(lng = 103.8198, lat = 1.3521, zoom = 11)
   })
   
@@ -1561,6 +1674,10 @@ server <- function(input, output) {
       # Now convert it to a coordinate matrix or extract x and y
       coords$x <- st_coordinates(transformed_geometry)[1, 1]  # longitude
       coords$y <- st_coordinates(transformed_geometry)[1, 2]  # latitude
+      
+      leafletProxy("singapore_map") %>%
+        clearMarkers() %>%  # Clear previous markers
+        addMarkers(lng = lng, lat = lat, popup = "Selected Location")
     } else {
       showNotification("Please select a location within Singapore.", type = "warning")
     }
