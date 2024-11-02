@@ -705,25 +705,12 @@ ui <- navbarPage(
              )
          )
   ),
-
-  tabPanel("Data Table", sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "map_type",
-        label = "Select Map Type",
-        choices = c(
-          "Average Rental Price" = "avg_price",
-          "Count of Rental Flats" = "count"
-        ),
-        selected = "avg_price"
-      ),
-      tmapOutput("mapPlot", width = "100%", height = 580)
-    ),
-
-    mainPanel(tmapOutput(
-      "mapPlot", width = "100%", height = 580
-    ))
-  ))
+  #==========================================================
+  # Data Table
+  #==========================================================
+  tabPanel("Data Table",
+           dataTableOutput("data_table",height = "100%")
+  )
 )
 
 #========================#
