@@ -598,7 +598,7 @@ ui <- navbarPage(
              sidebarPanel(
                # Input elements for user interaction can be added here
                selectInput("model_choice", "Choose Model Type:", 
-                           choices = c("Standard RF", "Tuned RF", "Geographical RF"), selected = "Standard RF")
+                           choices = c("Aspatial Random Forest", "Tuned Random Forest", "Geospatial Random Forest"), selected = "Aspatial Random Forest")
              ),
              
              mainPanel(
@@ -683,9 +683,9 @@ ui <- navbarPage(
                div(class = "callout-tip", style = "border-left: 5px solid #1e90ff; padding-left: 10px; margin-top: 20px;",
                    strong("Model Selection Guidance:"),
                    tags$ul(
-                     tags$li("Standard RF: Provides balanced accuracy and interpretability, useful for general predictions."),
-                     tags$li("Tuned RF: Optimized for scenarios where high accuracy is critical."),
-                     tags$li("Geographical RF: Ideal for predictions where spatial factors play a major role, such as in real estate.")
+                     tags$li("Aspatial Random Forest: Provides balanced accuracy and interpretability, useful for general predictions."),
+                     tags$li("Tuned Random Forest: Optimized for scenarios where high accuracy is critical."),
+                     tags$li("Geospatial Random Forest: Ideal for predictions where spatial factors play a major role, such as in real estate.")
                    )
                ),
                # Map for Geospatial model
@@ -1572,15 +1572,15 @@ server <- function(input, output) {
   #==========================================================
   # Dynamic model description based on selected model
   output$model_description <- renderUI({
-    if (input$model_choice == "Standard RF") {
+    if (input$model_choice == "Aspatial Random Forest") {
       tagList(
         h3("Random Forest (RF) Model"),
         p("The Random Forest model provides a straightforward approach with balanced accuracy and interpretability.")
       )
-    } else if (input$model_choice == "Tuned RF") {
+    } else if (input$model_choice == "Tuned Random Forest") {
       tagList(
         h3("Tuned Random Forest (RF with Tuned Hyperparameters)"),
-        p("The Tuned RF model improves prediction accuracy through hyperparameter adjustments.")
+        p("The Tuned Random Forest model improves prediction accuracy through hyperparameter adjustments.")
       )
     } else {
       tagList(
@@ -1592,27 +1592,27 @@ server <- function(input, output) {
   
   # Plot output based on model choice
   output$plot_rf <- renderPlot({
-    if (input$model_choice == "Standard RF") {
+    if (input$model_choice == "Aspatial Random Forest") {
       duplicate_columns <- names(test_data_rpc)[duplicated(names(test_data_rpc))]
       test_data_rpc <- test_data_rpc[, !duplicated(names(test_data_rpc))]
       ggplot(data = test_data_rpc, aes(x = prediction, y = monthly_rent)) +
         geom_point(alpha = 0.6, color = "#428bca") +
         geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
         labs(
-          title = "Predicted Monthly Rent vs. Standard RF Predictions",
-          x = "Standard RF Predictions",
+          title = "Predicted Monthly Rent vs. Aspatial Random Forest Predictions",
+          x = "Aspatial Random Forest Predictions",
           y = "Monthly Rent"
         ) +
         theme_minimal()
-    } else if (input$model_choice == "Tuned RF") {
+    } else if (input$model_choice == "Tuned Random Forest") {
       duplicate_columns <- names(test_data_rpt)[duplicated(names(test_data_rpt))]
       test_data_rpt <- test_data_rpt[, !duplicated(names(test_data_rpt))]
       ggplot(data = test_data_rpt, aes(x = prediction, y = monthly_rent)) +
         geom_point(alpha = 0.6, color = "#428bca") +
         geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
         labs(
-          title = "Predicted Monthly Rent vs. Tuned RF Predictions",
-          x = "Tuned RF Predictions",
+          title = "Predicted Monthly Rent vs. Tuned Random Forest Predictions",
+          x = "Tuned Random Forest Predictions",
           y = "Monthly Rent"
         ) +
         theme_minimal()
