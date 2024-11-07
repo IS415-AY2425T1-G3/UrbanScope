@@ -49,7 +49,9 @@ test_data_gp <- read_rds("data/rds/model/test_data_gp.rds")
 # Model Import
 rf_cal <- read_rds("data/rds/model/rf_cal.rds")
 rf_tuned <- read_rds("data/rds/model/rf_tuned.rds")
-gwRF_adaptive <- read_rds("data/rds/model/gwRF_adaptive.rds")
+gwRF_adaptive_3_room <- read_rds("data/rds/model/gwRF_adaptive_3_room.rds")
+gwRF_adaptive_4_room <- read_rds("data/rds/model/gwRF_adaptive_4_room.rds")
+gwRF_adaptive_5_room <- read_rds("data/rds/model/gwRF_adaptive_5_room.rds")
 
 # Define a global variable to store MLR results
 mlr_model_result <- NULL
@@ -624,9 +626,6 @@ ui <- navbarPage(
                conditionalPanel(
                  condition = "input.model_type != 'Geospatial Random Forest'",
                  h4("Aspatial Model Inputs"),
-                 selectInput("flat_type", "Flat Type:", 
-                             choices = c("3-room", "4-room", "5-room"), 
-                             selected = "3-room"),
                  sliderInput(
                    inputId = "no_of_kindergarten_500m",
                    label = "Number of Kindergartens within 500m:",
@@ -1673,13 +1672,8 @@ server <- function(input, output) {
   # Reactive prediction based on model choice and inputs
   prediction <- reactive({
     if (input$model_type == "Aspatial Random Forest" || input$model_type == "Tuned Random Forest") {
-      flat_type_value <- input$flat_type_geo
-      if (!flat_type_value %in% c("3-Room", "4-Room", "5-Room")) {
-        flat_type_value <- "3-Room"  # Set a default value if input doesn't match
-      }
-      
       model_input <- data.frame(
-        flat_type = factor(flat_type_value, 
+        flat_type = factor("3-Room", 
                            levels = c("3-Room", "4-Room", "5-Room")),
         no_of_kindergarten_500m = input$no_of_kindergarten_500m,
         no_of_childcare_500m = input$no_of_childcare_500m,
@@ -1698,6 +1692,7 @@ server <- function(input, output) {
       }
       
     } else if (input$model_type == "Geospatial Random Forest") {
+      
       # Check if coordinates are selected
       if (is.null(coords$x) || is.null(coords$y)) {
         return("Please select a location on the map to get coordinates.")
@@ -1711,8 +1706,6 @@ server <- function(input, output) {
       
       # Prepare the input data
       model_input_geo <- data.frame(
-        flat_type = factor(flat_type_value, 
-                           levels = c("3-Room", "4-Room", "5-Room")),
         no_of_kindergarten_500m = input$no_of_kindergarten_500m_geo,
         no_of_childcare_500m = input$no_of_childcare_500m_geo,
         prox_hawker = input$prox_hawker_geo,
@@ -1724,24 +1717,39 @@ server <- function(input, output) {
       )
       
       # Ensure gwRF_adaptive is a valid ranger model for geospatial data
-      gwRF_adaptive_prediction <- predict.grf(
-        gwRF_adaptive, 
-        model_input_geo, 
-        x.var.name = "X", 
-        y.var.name = "Y",
-        local.w=1,
-        global.w=0
+      gwRF_adaptive_prediction <- NULL  # Initialize prediction variable
+      gwRF_model <- switch(
+        flat_type_value,
+        "3-Room" = gwRF_adaptive_3_room,
+        "4-Room" = gwRF_adaptive_4_room,
+        "5-Room" = gwRF_adaptive_5_room
       )
+      
+      if (!is.null(gwRF_model)) {
+        gwRF_adaptive_prediction <- predict.grf(
+          gwRF_model, 
+          model_input_geo, 
+          x.var.name = "X", 
+          y.var.name = "Y",
+          local.w = 1,
+          global.w = 0
+        )
+      } else {
+        return("Error: Model not found for the selected flat type.")
+      }
+      
+      # Convert prediction to data frame and ensure it is numeric
       gwRF_adaptive_prediction <- as.data.frame(gwRF_adaptive_prediction)
-      # Debug: Print the prediction structure
+      
+      # Debug: Print the prediction structure and coordinates
       print("Prediction Structure:")
+      print(str(gwRF_adaptive_prediction))
+      print("Coordinates:")
       print(coords)
-      print(coords$x)
-      print(coords$y)
-      # Display the prediction (assuming gwRF_adaptive_prediction is a vector)
+      
+      # Display the prediction
       return(round(as.numeric(gwRF_adaptive_prediction[[1]]), 2))
     }
-    
   })
   
   # Display prediction result
