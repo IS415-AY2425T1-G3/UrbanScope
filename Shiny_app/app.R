@@ -239,7 +239,7 @@ ui <- navbarPage(
           selectInput("locationTown", "Select Town:",
                       choices = c("All of Singapore"='all', sort(unique(mpsz_sf$PLN_AREA_N)))))
       ),
-      mainPanel(tmapOutput('locationMap', width = "100%", height = "600px"))
+      mainPanel(uiOutput('locationMapUi', width = "100%", height = "600px"))
     ))
   ),
   #==========================================================
@@ -997,6 +997,39 @@ server <- function(input, output) {
   #==========================================================
   # Locations of Interest
   #==========================================================
+  output$locationMapUi <- renderUI({
+    req(input$dataset, input$locationTown)  # Ensure a dataset is selected
+    
+    # Dynamically select the dataset based on input
+    data_to_plot <- switch(input$dataset,
+                           "kindergarten_sf" = kindergarten_sf,
+                           "childcare_sf" = childcare_sf,
+                           "hawker_sf" = hawker_sf,
+                           "busstop_sf" = busstop_sf,
+                           "shoppingmall_sf" = shoppingmall_sf,
+                           "mrt_sf" = mrt_sf,
+                           "primarysch_sf" = primarysch_sf,
+                           "cbd_sf" = cbd_sf)
+    
+    # Filter for town boundaries in mpsz_sf if needed
+    if (input$locationTown != 'all' && input$dataset != "cbd_sf") {
+      specific_town_sf <- mpsz_sf %>% filter(PLN_AREA_N == input$locationTown)
+      
+      # Perform a spatial intersection
+      data_to_plot <- st_intersection(data_to_plot, specific_town_sf)
+    }
+    
+    # Check if data_to_plot is empty
+    if (nrow(data_to_plot) == 0) {
+      # Display a message when no data is available
+      return(div("No data available for the selected month and dataset.", style = "text-align: center; font-weight: bold; color: red; margin-top:30%"))
+    } else {
+      # Render the map with the selected dataset
+      tmap_options(check.and.fix = TRUE)
+      tmap_mode("view")
+      return(tmapOutput('locationMap'))
+    }
+  })
   
   output$locationMap <- renderTmap({
     req(input$dataset, input$locationTown)  # Ensure a dataset is selected
