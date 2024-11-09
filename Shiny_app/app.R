@@ -19,7 +19,8 @@ pacman::p_load(
   shinyalert,
   leaflet,
   ranger,
-  SpatialML
+  SpatialML,
+  see
 )
 
 rental_sf <- read_rds('data/rds/rental_sf.rds')
@@ -57,10 +58,11 @@ mlr_model_result <- NULL
 rental_fw_mlr <- NULL
 rental_bw_mlr <- NULL
 rental_bi_mlr <- NULL
+filtered_mlr_rental_sf <- NULL
 
 # Define global varible for GWR
 gwr_model <- NULL
-filtered_rental_sf <- rental_sf
+filtered_gwr_rental_sf <- NULL
 
 #========================#
 ###### Shiny UI ######
@@ -331,21 +333,132 @@ ui <- navbarPage(
     tabPanel("Multiple Linear Regression",
              sidebarLayout(
                sidebarPanel(
-                 selectInput(
-                   inputId = "mlr_dependent_variable",
-                   label = "Dependent Variable",
-                   choices = c("Monthly Rent" = "monthly_rent"),
-                   selected = "CV"
-                 ),
-                 checkboxGroupInput(
-                   inputId = "mlr_independent_variables",
-                   label = "Select Independent Variables",
-                   choices = colnames(rental_sf)[7:19],
-                   selected = colnames(rental_sf)[7:19],
-                   inline = FALSE
+                 conditionalPanel(
+                   condition = "input.mlr_tabs != 'mlr_rd_olsrr_tab'",
+                   selectInput(
+                     inputId = "mlr_dataset_filter_variable",
+                     label = "Dataset Selection",
+                     choices = c("3-Room" = "3-ROOM", "4-Room" = "4-ROOM", "5-Room" = "5-ROOM"),
+                     selected = "3-ROOM"
+                   ),
+                   selectInput(
+                     inputId = "mlr_dataset_date_range",
+                     label = "Date Range (latest months)",
+                     choices = 1:9,
+                     selected = 1
+                   ),
+                   selectInput(
+                     inputId = "mlr_dependent_variable",
+                     label = "Dependent Variable",
+                     choices = c("Monthly Rent" = "monthly_rent"),
+                     selected = "CV"
+                   ),
+                   checkboxGroupInput(
+                     inputId = "mlr_independent_variables",
+                     label = "Select Independent Variables",
+                     choices = colnames(rental_sf)[7:19],
+                     selected = colnames(rental_sf)[7:19],
+                     inline = FALSE
+                   ),
+                   actionButton(
+                     inputId = "MLRSubmit",
+                     label = "Submit",
+                     style = "color: white; background-color: #007BFF; border-color: #007BFF"
+                   )
                  ),
                  conditionalPanel(
-                   condition = "input.mlr_tabs == 'stepwise_tab'",
+                   condition = "input.mlr_tabs == 'mlr_rd_olsrr_tab'",
+                   checkboxGroupInput(
+                     inputId = "mlr_rd_olsrr_plot_selection",
+                     label = "Select Plots to Display",
+                     choices = c(
+                       "Multicollinearity" = "multicollinearity",
+                       "Non-Linearity" = "non_linearity",
+                       "Normality" = "normality",
+                       "MLR RES Plot" = "MLR_RES"
+                     ),
+                     selected = c("multicollinearity", "non_linearity", "normality", "MLR_RES")
+                   ),
+                 )
+               ),
+               #==========================================================
+               # MLR - Plot section
+               #==========================================================
+               mainPanel(tabsetPanel(
+                 id = "mlr_tabs",
+                 tabPanel("Model Info", value = "mlr_model_info_tab", verbatimTextOutput("mlr_model_info")),
+                 tabPanel(
+                   "Publication Quality Table ",
+                   value = "mlr_pqt_tab",
+                   verbatimTextOutput("mlr_pqt_model_info")
+                 ),
+                 tabPanel(
+                   "Regression Diagnostics (olsrr Package)",
+                   value = "mlr_rd_olsrr_tab",
+                   div(
+                     class = "alert alert-warning",
+                     h4("⚠️ Please wait while the plots are loading. Do not click on other tabs.")
+                   ),
+                   conditionalPanel(
+                     condition = "input.mlr_rd_olsrr_plot_selection.includes('multicollinearity')",
+                     h4("Multicollinearity Diagnostic"),
+                     verbatimTextOutput("olsrr_multicollinearity_text"),
+                   ),
+                   conditionalPanel(
+                     condition = "input.mlr_rd_olsrr_plot_selection.includes('non_linearity')",
+                     h4("Non-Linearity Diagnostic"),
+                     withSpinner(plotOutput("olsrr_non_linearity_plot", width = "100%", height = "600px")),
+                   ),
+                   conditionalPanel(
+                     condition = "input.mlr_rd_olsrr_plot_selection.includes('normality')",
+                     h4("Normality Diagnostic"),
+                     withSpinner(plotOutput("olsrr_normality_plot", width = "100%", height = "600px")),
+                   ),
+                   conditionalPanel(
+                     condition = "input.mlr_rd_olsrr_plot_selection.includes('MLR_RES')",
+                     h4("MLR Residuals Diagnostic"),
+                     withSpinner(tmapOutput("olsrr_MLR_RES_plot", width = "100%", height = 580)),
+                   ),
+                 ),
+               ))
+             )),
+    #==========================================================
+    # Multiple Linear Regression - Stepwise
+    #==========================================================
+    tabPanel("Multiple Linear Regression - Stepwise",
+             sidebarLayout(
+               sidebarPanel(
+                 conditionalPanel(
+                   condition = "input.stepwise_tabs == 'stepwise_tab'",
+                   selectInput(
+                     inputId = "stepwise_dataset_filter_variable",
+                     label = "Dataset Selection",
+                     choices = c(
+                       "3-Room" = "3-ROOM",
+                       "4-Room" = "4-ROOM",
+                       "5-Room" = "5-ROOM"
+                     ),
+                     selected = "3-ROOM"
+                   ),
+                   selectInput(
+                     inputId = "stepwise_dataset_date_range",
+                     label = "Date Range (latest months)",
+                     choices = 1:9,
+                     selected = 1
+                   ),
+                   selectInput(
+                     inputId = "stepwise_dependent_variable",
+                     label = "Dependent Variable",
+                     choices = c("Monthly Rent" = "monthly_rent"),
+                     selected = "CV"
+                   ),
+                   checkboxGroupInput(
+                     inputId = "stepwise_independent_variables",
+                     label = "Select Independent Variables",
+                     choices = colnames(rental_sf)[7:19],
+                     selected = colnames(rental_sf)[7:19],
+                     inline = FALSE
+                   ),
                    sliderInput(
                      inputId = "stepwise_p_value_threshold",
                      label = "Select p-value threshold for Stepwise Selection:",
@@ -360,143 +473,286 @@ ui <- navbarPage(
                      choices = c("Forward", "Backward", "Both"),
                      selected = "Forward",
                      multiple = TRUE
+                   ),
+                   actionButton(
+                     inputId = "StepwiseSubmit",
+                     label = "Submit",
+                     style = "color: white; background-color: #007BFF; border-color: #007BFF"
                    )
                  ),
-                 actionButton(
-                   inputId = "MLRSubmit",
-                   label = "Submit",
-                   style = "color: white; background-color: #007BFF; border-color: #007BFF"
+                 conditionalPanel(
+                   condition = "input.stepwise_tabs != 'stepwise_tab' && input.stepwise_tabs != 'stepwise_comparison_tab'",
+                   checkboxGroupInput(
+                     inputId = "stepwise_plot_selection",
+                     label = "Select Plots to Display",
+                     choices = c(
+                       "Multicollinearity" = "multicollinearity",
+                       "Non-Linearity" = "non_linearity",
+                       "Normality" = "normality",
+                       "Outliers" = "outliers"
+                     ),
+                     selected = c("multicollinearity", "non_linearity", "normality", "outliers")
+                   ),
+                 ),
+                 conditionalPanel(
+                   condition = "input.stepwise_tabs == 'stepwise_comparison_tab'",
+                   # Display message
+                   h4("Information Only"),
+                   HTML("<p>This tab is for display purposes only. No input is required because it provides a comparison view based on pre-calculated data.</p>")
                  )
                ),
-               mainPanel(tabsetPanel(
-                 id = "mlr_tabs",
-                 tabPanel("Model Info", value = "mlr_model_info_tab", verbatimTextOutput("mlr_model_info")),
-                 tabPanel(
-                   "Publication Quality Table ",
-                   value = "mlr_pqt_tab",
-                   verbatimTextOutput("mlr_pqt_model_info")
-                 ),
-                 tabPanel(
-                   "Stepwise Method",
-                   value = "stepwise_tab",
-                   conditionalPanel(
-                     condition = "input.stepwise_method.includes('Forward')",
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Information - Forward"),
-                       verbatimTextOutput("stepwise_forward_info")
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Plot - Forward"),
-                       plotOutput("stepwise_forward_plot", width = "100%", height = "600px")
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Parameters - Forward"),
-                       plotOutput(
-                         "stepwise_forward_parameters_plot",
-                         width = "100%",
-                         height = "600px"
-                       )
-                     )),
+               #==========================================================
+               # Stepwise - Plot section
+               #==========================================================
+               mainPanel(
+                 tabsetPanel(
+                   id = "stepwise_tabs",
+                   tabPanel(
+                     "Stepwise Method",
+                     value = "stepwise_tab",
+                     conditionalPanel(
+                       condition = "input.stepwise_method.includes('Forward')",
+                       fluidRow(column(
+                         width = 12,
+                         h3("Model Information - Forward"),
+                         verbatimTextOutput("stepwise_forward_info")
+                       )),
+                       fluidRow(column(
+                         width = 12, h3("Model Plot - Forward"), withSpinner(
+                           plotOutput("stepwise_forward_plot", width = "100%", height = "600px")
+                         )
+                       )),
+                       fluidRow(column(
+                         width = 12,
+                         h3("Model Parameters - Forward"),
+                         withSpinner(
+                           plotOutput(
+                             "stepwise_forward_parameters_plot",
+                             width = "100%",
+                             height = "600px"
+                           )
+                         )
+                       )),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_method.includes('Backward')",
+                       fluidRow(column(
+                         width = 12,
+                         h3("Model Information - Backward"),
+                         verbatimTextOutput("stepwise_backward_info")
+                       )),
+                       fluidRow(column(
+                         width = 12, h3("Model Plot - Backward"), withSpinner(
+                           plotOutput(
+                             "stepwise_backward_plot",
+                             width = "100%",
+                             height = "600px"
+                           )
+                         )
+                       )),
+                       fluidRow(column(
+                         width = 12,
+                         h3("Model Parameters - Backward"),
+                         withSpinner(
+                           plotOutput(
+                             "stepwise_backward_parameters_plot",
+                             width = "100%",
+                             height = "600px"
+                           )
+                         )
+                       )),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_method.includes('Both')",
+                       fluidRow(column(
+                         width = 12,
+                         h3("Model Information - Both"),
+                         verbatimTextOutput("stepwise_both_info")
+                       )),
+                       fluidRow(column(
+                         width = 12, h3("Model Plot - Both"), withSpinner(
+                           plotOutput("stepwise_both_plot", width = "100%", height = "600px")
+                         )
+                       )),
+                       fluidRow(column(
+                         width = 12, h3("Model Parameters - Both"), withSpinner(
+                           plotOutput(
+                             "stepwise_both_parameters_plot",
+                             width = "100%",
+                             height = "600px"
+                           )
+                         )
+                       ))
+                     )
                    ),
-                   
-                   conditionalPanel(
-                     condition = "input.stepwise_method.includes('Backward')",
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Information - Backward"),
-                       verbatimTextOutput("stepwise_backward_info")
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Plot - Backward"),
-                       plotOutput(
-                         "stepwise_backward_plot",
-                         width = "100%",
-                         height = "600px"
+                   tabPanel("Stepwise Comparison", value = "stepwise_comparison_tab", withSpinner(
+                     plotOutput(
+                       "stepwise_comparison_plot",
+                       width = "100%",
+                       height = "600px"
+                     )
+                   )),
+                   tabPanel(
+                     "Regression Diagnostics (Performance Package) - Forward",
+                     value = "mlr_rd_performance_forward_tab",
+                     div(
+                       class = "alert alert-warning",
+                       h4("⚠️ Please wait while the plots are loading. Do not click on other tabs.")
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('multicollinearity')",
+                       h4("Multicollinearity Diagnostic"),
+                       verbatimTextOutput("performance_forward_multicollinearity_text"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_forward_multicollinearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
                        )
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Parameters - Backward"),
-                       plotOutput(
-                         "stepwise_backward_parameters_plot",
-                         width = "100%",
-                         height = "600px"
-                       )
-                     )),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('non_linearity')",
+                       h4("Non-Linearity Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_forward_non_linearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('normality')",
+                       h4("Normality Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_forward_normality_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('outliers')",
+                       h4("Outlier Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_forward_outlier_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
                    ),
-                   
-                   conditionalPanel(
-                     condition = "input.stepwise_method.includes('Both')",
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Information - Both"),
-                       verbatimTextOutput("stepwise_both_info")
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Plot - Both"),
-                       plotOutput("stepwise_both_plot", width = "100%", height = "600px")
-                     )),
-                     fluidRow(column(
-                       width = 12,
-                       h3("Model Parameters - Both"),
-                       plotOutput(
-                         "stepwise_both_parameters_plot",
-                         width = "100%",
-                         height = "600px"
-                       )
-                     ))
-                   )
-                 ), 
-                 tabPanel(
-                   "Stepwise Comparison",
-                   value = "stepwise_comparison_tab",
-                   plotOutput("stepwise_comparison_plot", width = "100%", height = "600px")
-                 ),
-                 tabPanel(
-                   "Regression Diagnostics (olsrr Package)",
-                   value = "mlr_rd_olsrr_tab",
-                   h4("Please wait while the plots are loading. Do not click on other tabs."),
-                   verbatimTextOutput("olsrr_multicollinearity_text"),
-                   withSpinner(plotOutput("olsrr_non_linearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("olsrr_normality_plot", width = "100%", height = "600px")),
-                   withSpinner(tmapOutput("olsrr_MLR_RES_plot", width = "100%", height = 580))
-                 ),
-                 tabPanel(
-                   "Regression Diagnostics (Performance Package) - Forward",
-                   value = "mlr_rd_performance_forward_tab",
-                   h4("Please wait while the plots are loading. Do not click on other tabs."),
-                   verbatimTextOutput("performance_forward_multicollinearity_text"),
-                   withSpinner(plotOutput("performance_forward_multicollinearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_forward_non_linearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_forward_normality_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_forward_outlier_plot", width = "100%", height = "600px")),
-                 ),
-                 tabPanel(
-                   "Regression Diagnostics (Performance Package) - Backward",
-                   value = "mlr_rd_performance_backward_tab",
-                   h4("Please wait while the plots are loading. Do not click on other tabs."),
-                   verbatimTextOutput("performance_backward_multicollinearity_text"),
-                   withSpinner(plotOutput("performance_backward_multicollinearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_backward_non_linearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_backward_normality_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_backward_outlier_plot", width = "100%", height = "600px")),
-                 ),
-                 tabPanel(
-                   "Regression Diagnostics (Performance Package) - Both",
-                   value = "mlr_rd_performance_both_tab",
-                   h4("Please wait while the plots are loading. Do not click on other tabs."),
-                   verbatimTextOutput("performance_both_multicollinearity_text"),
-                   withSpinner(plotOutput("performance_both_multicollinearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_both_non_linearity_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_both_normality_plot", width = "100%", height = "600px")),
-                   withSpinner(plotOutput("performance_both_outlier_plot", width = "100%", height = "600px")),
-                 ),
-               ))
+                   tabPanel(
+                     "Regression Diagnostics (Performance Package) - Backward",
+                     value = "mlr_rd_performance_backward_tab",
+                     div(
+                       class = "alert alert-warning",
+                       h4("⚠️ Please wait while the plots are loading. Do not click on other tabs.")
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('multicollinearity')",
+                       h4("Multicollinearity Diagnostic"),
+                       verbatimTextOutput("performance_backward_multicollinearity_text"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_backward_multicollinearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('non_linearity')",
+                       h4("Non-Linearity Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_backward_non_linearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('normality')",
+                       h4("Normality Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_backward_normality_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('outliers')",
+                       h4("Outlier Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_backward_outlier_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                   ),
+                   tabPanel(
+                     "Regression Diagnostics (Performance Package) - Both",
+                     value = "mlr_rd_performance_both_tab",
+                     div(
+                       class = "alert alert-warning",
+                       h4("⚠️ Please wait while the plots are loading. Do not click on other tabs.")
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('multicollinearity')",
+                       h4("Multicollinearity Diagnostic"),
+                       verbatimTextOutput("performance_both_multicollinearity_text"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_both_multicollinearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('non_linearity')",
+                       h4("Non-Linearity Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_both_non_linearity_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('normality')",
+                       h4("Normality Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_both_normality_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                     conditionalPanel(
+                       condition = "input.stepwise_plot_selection.includes('outliers')",
+                       h4("Outlier Diagnostic"),
+                       withSpinner(
+                         plotOutput(
+                           "performance_both_outlier_plot",
+                           width = "100%",
+                           height = "600px"
+                         )
+                       ),
+                     ),
+                   ),
+                 )
+               )
              )), 
     #==========================================================
     # GWR
@@ -1142,10 +1398,19 @@ server <- function(input, output) {
       paste(input$mlr_independent_variables, collapse = " + ")
     )
     formula <- as.formula(formula_input)
+    
+    # Filter the dataset
+    latest_date <- as.Date("2024-09-01")
+    months_back <- as.numeric(input$mlr_dataset_date_range)
+    filtered_mlr_rental_sf <<- rental_sf %>% # overwrite the global variable
+      filter(flat_type == input$mlr_dataset_filter_variable) %>%
+      filter(rent_approval_date >= latest_date %m-% months(months_back - 1))
+    
+    
     # Run GWR with user-specified parameters
     output <- lm(
       formula = formula,
-      data = rental_sf
+      data = filtered_mlr_rental_sf
     )
     mlr_model_result <<- output # overwrite
     return(output)
@@ -1157,84 +1422,14 @@ server <- function(input, output) {
     if (active_tab == "mlr_model_info_tab") {
       # Calculate the result and update the output
       output$mlr_model_info <- renderText({
-        result <- paste(capture.output(
-          summary(mlrResult())
-          ), collapse = "\n")
+        result <- paste(capture.output(summary(mlrResult())), collapse = "\n")
         return(result)
       })
-    }else if (active_tab == "mlr_pqt_tab") {
+    } else if (active_tab == "mlr_pqt_tab") {
       output$mlr_pqt_model_info <- renderText({
-        result <- paste(capture.output(
-          ols_regress(mlrResult())
-          ), collapse = "\n")
+        result <- paste(capture.output(ols_regress(mlrResult())), collapse = "\n")
         return(result)
       })
-    } else if (active_tab == "stepwise_tab") {
-      result <- mlrResult()
-      # to get the user input of the stepwise selection
-      if ("Forward" %in% input$stepwise_method) {
-        rental_fw_mlr <<- ols_step_forward_p(
-          result,
-          p_val = input$stepwise_p_value_threshold,
-          details = FALSE
-        )
-        # output the stepwise forward info
-        output$stepwise_forward_info <- renderText({
-          result <- paste(capture.output(
-            rental_fw_mlr
-          ), collapse = "\n")
-          return(result)
-        })
-        output$stepwise_forward_plot <- renderPlot({
-          plot(rental_fw_mlr)
-        })
-        output$stepwise_forward_parameters_plot <- renderPlot({
-          ggcoefstats(rental_fw_mlr$model, sort = "ascending")
-        })
-      }
-      # For backward
-      if ("Backward" %in% input$stepwise_method) {
-        rental_bw_mlr <<- ols_step_backward_p(
-          result,
-          p_val = input$stepwise_p_value_threshold,
-          details = FALSE
-        )
-        # output the stepwise backward info
-        output$stepwise_backward_info <- renderText({
-          result <- paste(capture.output(
-            rental_bw_mlr
-          ), collapse = "\n")
-          return(result)
-        })
-        output$stepwise_backward_plot <- renderPlot({
-          plot(rental_bw_mlr)
-        })
-        output$stepwise_backward_parameters_plot <- renderPlot({
-          ggcoefstats(rental_bw_mlr$model, sort = "ascending")
-        })
-        
-      }
-      #For Both
-      if ("Both" %in% input$stepwise_method) {
-        rental_bi_mlr <<- ols_step_both_p(
-          result,
-          p_val = input$stepwise_p_value_threshold,
-          details = FALSE
-        )
-        # output the stepwise backward info
-        output$stepwise_both_info <- renderText({
-          result <- paste(capture.output(
-            rental_bi_mlr
-          ), collapse = "\n")
-          return(result)
-        })
-        output$stepwise_both_plot <- renderPlot({
-          plot(rental_bi_mlr)
-        })
-        output$stepwise_both_parameters_plot <- renderPlot({
-          ggcoefstats(rental_bi_mlr$model, sort = "ascending")
-        })
-      }
     }
   }
   
@@ -1245,25 +1440,18 @@ server <- function(input, output) {
   observeEvent(input$MLRSubmit, {
     # Detect the active tab
     active_tab <- input$mlr_tabs
-    if (length(input$stepwise_method) == 0 && active_tab == "stepwise_tab") {
-      shinyalert(
-        title = "Selection Required",
-        text = "You must select at least one stepwise method.",
-        type = "warning"
-      )
-    }
     updateMLRModelResult(active_tab) # Method to process the model
   })
   
   
   #=======================
-  # Observe GWR Tab change
+  # Observe MLR Tab change
   #=======================
   
   # reload the output everytime
   observeEvent(input$mlr_tabs, {
     # re-enable the submit button
-    if(input$mlr_tabs != "stepwise_comparison_tab" && input$mlr_tabs != "mlr_rd_olsrr_tab" ) {
+    if(input$mlr_tabs != "mlr_rd_olsrr_tab" ) {
       shinyjs::enable("MLRSubmit")  # Re-enable the button after processing
       # Change button color and text back to original
       shinyjs::runjs("$('#MLRSubmit').css('background-color', '#007BFF');")  # Original color
@@ -1281,7 +1469,8 @@ server <- function(input, output) {
           return(result)
         }
       })
-    }else if(input$mlr_tabs == "mlr_pqt_tab") {
+    }
+    else if(input$mlr_tabs == "mlr_pqt_tab") {
       output$mlr_pqt_model_info <- renderText({
         if (is.null(mlr_model_result)) {
           return("Please build the MLR model first.")
@@ -1293,11 +1482,188 @@ server <- function(input, output) {
         }
         
       })
-    } else if(input$mlr_tabs == "stepwise_comparison_tab") {
+    } 
+    else if (input$mlr_tabs == "mlr_rd_olsrr_tab" ) {
       # Disable the button while processing
       shinyjs::disable("MLRSubmit")  # Disable the button
       shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
       shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      # Check if any model is NULL
+      if (is.null(mlr_model_result)) {
+        # Display a message to ask the user to run the models first
+        shinyalert(title = "Models Not Run",
+                   text = "Please ensure you run the MLR model at least once, either in the Model Info Tab or the Publication Quality Table Tab.",
+                   type = "warning")
+      }else { # if is not NULL, display the output
+        output$olsrr_multicollinearity_text <- renderText({
+          result <-  paste(capture.output(ols_vif_tol(mlr_model_result)), collapse = "\n")
+          return(result)
+        })
+        
+        output$olsrr_non_linearity_plot <- renderPlot({
+          ols_plot_resid_fit(mlr_model_result)
+        })
+        
+        output$olsrr_normality_plot <- renderPlot({
+          ols_plot_resid_hist(mlr_model_result)
+        })
+        
+        mlr.output <- as.data.frame(mlr_model_result$residuals)
+        rental_res_sf <- cbind(filtered_mlr_rental_sf, 
+                               mlr_model_result$residuals) %>%
+          rename(`MLR_RES` = `mlr_model_result.residuals`)
+        
+        output$olsrr_MLR_RES_plot <- renderTmap({
+          tmap_mode("view")
+          tm_shape(mpsz_sf)+
+            tmap_options(check.and.fix = TRUE) +
+            tm_polygons(alpha = 0.4) +
+            tm_shape(rental_res_sf) +  
+            tm_dots(col = "MLR_RES",
+                    alpha = 0.6,
+                    style="quantile") +
+            tm_view(set.zoom.limits = c(11,14))
+        })
+      }
+    }
+  })
+  
+  
+  #==========================================================
+  # Multiple Linear Regression - Stepwise
+  #==========================================================
+  stepwiseMLRResult <- eventReactive(input$StepwiseSubmit, {
+    # Create the formula based on selected variables
+    formula_input <- paste(
+      input$stepwise_dependent_variable,
+      "~",
+      paste(input$stepwise_independent_variables, collapse = " + ")
+    )
+    formula <- as.formula(formula_input)
+    
+    # Filter the dataset
+    latest_date <- as.Date("2024-09-01")
+    months_back <- as.numeric(input$stepwise_dataset_date_range)
+    filtered_mlr_rental_sf <<- rental_sf %>% # overwrite the global variable
+      filter(flat_type == input$stepwise_dataset_filter_variable) %>%
+      filter(rent_approval_date >= latest_date %m-% months(months_back - 1))
+    
+    # Run MLR with user-specified parameters
+    output <- lm(
+      formula = formula,
+      data = filtered_mlr_rental_sf
+    )
+    mlr_model_result <<- output # overwrite
+    return(output)
+  })
+  
+  updateStepwiseResult <- function(active_tab) {
+    # Disable the button while processing
+    shinyjs::disable("StepwiseSubmit")  # Disable the button
+    shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#6c757d');")
+    shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#6c757d');")
+    result <- stepwiseMLRResult()
+    # to get the user input of the stepwise selection
+    if ("Forward" %in% input$stepwise_method) {
+      rental_fw_mlr <<- ols_step_forward_p(result,
+                                           p_val = input$stepwise_p_value_threshold,
+                                           details = FALSE)
+      # output the stepwise forward info
+      output$stepwise_forward_info <- renderText({
+        result <- paste(capture.output(rental_fw_mlr), collapse = "\n")
+        return(result)
+      })
+      output$stepwise_forward_plot <- renderPlot({
+        plot(rental_fw_mlr)
+      })
+      output$stepwise_forward_parameters_plot <- renderPlot({
+        ggcoefstats(rental_fw_mlr$model, sort = "ascending")
+      })
+    }
+    # For backward
+    if ("Backward" %in% input$stepwise_method) {
+      rental_bw_mlr <<- ols_step_backward_p(result,
+                                            p_val = input$stepwise_p_value_threshold,
+                                            details = FALSE)
+      # output the stepwise backward info
+      output$stepwise_backward_info <- renderText({
+        result <- paste(capture.output(rental_bw_mlr), collapse = "\n")
+        return(result)
+      })
+      output$stepwise_backward_plot <- renderPlot({
+        plot(rental_bw_mlr)
+      })
+      output$stepwise_backward_parameters_plot <- renderPlot({
+        ggcoefstats(rental_bw_mlr$model, sort = "ascending")
+      })
+      
+    }
+    #For Both
+    if ("Both" %in% input$stepwise_method) {
+      rental_bi_mlr <<- ols_step_both_p(result,
+                                        p_val = input$stepwise_p_value_threshold,
+                                        details = FALSE)
+      # output the stepwise backward info
+      output$stepwise_both_info <- renderText({
+        result <- paste(capture.output(rental_bi_mlr), collapse = "\n")
+        return(result)
+      })
+      output$stepwise_both_plot <- renderPlot({
+        plot(rental_bi_mlr)
+      })
+      output$stepwise_both_parameters_plot <- renderPlot({
+        ggcoefstats(rental_bi_mlr$model, sort = "ascending")
+      })
+    }
+  }
+  
+  
+  #==============================
+  # Observe Stepwise Submit Button Event
+  #==============================
+  # Function to update the MLR model after the button is click 
+  observeEvent(input$StepwiseSubmit, {
+    # Detect the active tab
+    active_tab <- input$stepwise_tabs
+    if (length(input$stepwise_method) == 0 && active_tab == "stepwise_tab") {
+      shinyalert(
+        title = "Selection Required",
+        text = "You must select at least one stepwise method.",
+        type = "warning"
+      )
+    }
+    updateStepwiseResult(active_tab) # Method to process the model
+    
+    shinyjs::enable("StepwiseSubmit")  # Re-enable the button after processing
+    # Change button color and text back to original
+    shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#007BFF');")  # Original color
+    shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#007BFF');")  # Original border color
+  })
+  
+  
+  
+  #=======================
+  # Observe Stepwise Tab change
+  # to display warning message
+  #=======================
+  
+  # reload the output everytime
+  observeEvent(input$stepwise_tabs, {
+    observeTab <- input$stepwise_tabs
+    # re-enable the submit button
+    if(observeTab != "stepwise_comparison_tab") {
+      shinyjs::enable("StepwiseSubmit")  # Re-enable the button after processing
+      # Change button color and text back to original
+      shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#007BFF');")  # Original color
+      shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#007BFF');")  # Original border color
+    }
+    
+    # To check which tab currently on
+    if(observeTab == "stepwise_comparison_tab") {
+      # Disable the button while processing
+      shinyjs::disable("StepwiseSubmit")  # Disable the button
+      shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#6c757d');")
       # Check if any model is NULL
       if (is.null(mlr_model_result) || 
           (is.null(rental_fw_mlr$model) && 
@@ -1332,54 +1698,12 @@ server <- function(input, output) {
           plot(metric)
         })
       }
-    }else if (input$mlr_tabs == "mlr_rd_olsrr_tab" ) {
-      # Disable the button while processing
-      shinyjs::disable("MLRSubmit")  # Disable the button
-      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
-      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
-      # Check if any model is NULL
-      if (is.null(mlr_model_result)) {
-        # Display a message to ask the user to run the models first
-        shinyalert(title = "Models Not Run",
-                   text = "Please ensure you run the MLR model at least once, either in the Model Info Tab or the Publication Quality Table Tab.",
-                   type = "warning")
-      }else { # if is not NULL, display the output
-        output$olsrr_multicollinearity_text <- renderText({
-          result <-  paste(capture.output(ols_vif_tol(mlr_model_result)), collapse = "\n")
-          return(result)
-        })
-        
-        output$olsrr_non_linearity_plot <- renderPlot({
-          ols_plot_resid_fit(mlr_model_result)
-        })
-        
-        output$olsrr_normality_plot <- renderPlot({
-          ols_plot_resid_hist(mlr_model_result)
-        })
-        
-        mlr.output <- as.data.frame(mlr_model_result$residuals)
-        rental_res_sf <- cbind(rental_sf, 
-                               mlr_model_result$residuals) %>%
-          rename(`MLR_RES` = `mlr_model_result.residuals`)
-        
-        output$olsrr_MLR_RES_plot <- renderTmap({
-          tmap_mode("view")
-          tm_shape(mpsz_sf)+
-            tmap_options(check.and.fix = TRUE) +
-            tm_polygons(alpha = 0.4) +
-            tm_shape(rental_res_sf) +  
-            tm_dots(col = "MLR_RES",
-                    alpha = 0.6,
-                    style="quantile") +
-            tm_view(set.zoom.limits = c(11,14))
-        })
-      }
     }
-    else if (input$mlr_tabs == "mlr_rd_performance_forward_tab" ) {
+    else if (observeTab == "mlr_rd_performance_forward_tab" ) {
       # Disable the button while processing
-      shinyjs::disable("MLRSubmit")  # Disable the button
-      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
-      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      shinyjs::disable("StepwiseSubmit")  # Disable the button
+      shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#6c757d');")
       
       # Check if the data needed is null or not
       if (is.null(rental_fw_mlr)) {
@@ -1416,11 +1740,11 @@ server <- function(input, output) {
         
       }
     }
-    else if (input$mlr_tabs == "mlr_rd_performance_backward_tab" ) {
+    else if (observeTab == "mlr_rd_performance_backward_tab" ) {
       # Disable the button while processing
-      shinyjs::disable("MLRSubmit")  # Disable the button
-      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
-      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      shinyjs::disable("StepwiseSubmit")  # Disable the button
+      shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#6c757d');")
       
       # Check if the data needed is null or not
       if (is.null(rental_bw_mlr)) {
@@ -1457,11 +1781,11 @@ server <- function(input, output) {
         
       }
     }
-    else if (input$mlr_tabs == "mlr_rd_performance_both_tab" ) {
+    else if (observeTab == "mlr_rd_performance_both_tab" ) {
       # Disable the button while processing
-      shinyjs::disable("MLRSubmit")  # Disable the button
-      shinyjs::runjs("$('#MLRSubmit').css('background-color', '#6c757d');")
-      shinyjs::runjs("$('#MLRSubmit').css('border-color', '#6c757d');")
+      shinyjs::disable("StepwiseSubmit")  # Disable the button
+      shinyjs::runjs("$('#StepwiseSubmit').css('background-color', '#6c757d');")
+      shinyjs::runjs("$('#StepwiseSubmit').css('border-color', '#6c757d');")
       
       # Check if the data needed is null or not
       if (is.null(rental_bi_mlr)) {
@@ -1501,6 +1825,7 @@ server <- function(input, output) {
   })
   
   
+  
   #==========================================================
   # GWR
   #==========================================================
@@ -1511,7 +1836,7 @@ server <- function(input, output) {
     
     gwr_adaptive_output <- as.data.frame(input_model$SDF)
     
-    rental_sf_adaptive <- cbind(filtered_rental_sf, gwr_adaptive_output)
+    rental_sf_adaptive <- cbind(filtered_gwr_rental_sf, gwr_adaptive_output)
     
     # Create the tmap visualization
     tm_shape(mpsz_sf) +
@@ -1540,14 +1865,14 @@ server <- function(input, output) {
     # Filter the dataset
     latest_date <- as.Date("2024-09-01")
     months_back <- as.numeric(input$gwr_dataset_date_range)
-    filtered_rental_sf <<- rental_sf %>% # overwrite the global variable
+    filtered_gwr_rental_sf <<- rental_sf %>% # overwrite the global variable
       filter(flat_type == input$gwr_dataset_filter_variable) %>%
       filter(rent_approval_date >= latest_date %m-% months(months_back - 1))
     
     # Run GWR with user-specified parameters
     output <- gwr.basic(
       formula = formula,
-      data = filtered_rental_sf,
+      data = filtered_gwr_rental_sf,
       bw = if (as.logical(input$gwr_adaptive)) input$gwr_adaptive_bw else  input$gwr_fixed_bw,
       kernel = input$gwr_kernel,
       adaptive = as.logical(input$gwr_adaptive),
