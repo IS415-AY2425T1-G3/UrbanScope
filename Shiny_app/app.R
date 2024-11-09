@@ -59,6 +59,7 @@ rental_fw_mlr <- NULL
 rental_bw_mlr <- NULL
 rental_bi_mlr <- NULL
 filtered_mlr_rental_sf <- NULL
+stepwise_warning_flag <- NULL
 
 # Define global varible for GWR
 gwr_model <- NULL
@@ -511,7 +512,11 @@ ui <- navbarPage(
                      "Stepwise Method",
                      value = "stepwise_tab",
                      conditionalPanel(
-                       condition = "input.stepwise_method.includes('Forward')",
+                       condition = "output.isStepwiseWarningFlagNull",
+                       h4("⚠️ Please build the Stepwise model first.", class = "alert alert-warning")
+                     ),
+                     conditionalPanel(
+                       condition = "!output.isStepwiseWarningFlagNull && input.stepwise_method.includes('Forward')",
                        fluidRow(column(
                          width = 12,
                          h3("Model Information - Forward"),
@@ -535,7 +540,7 @@ ui <- navbarPage(
                        )),
                      ),
                      conditionalPanel(
-                       condition = "input.stepwise_method.includes('Backward')",
+                       condition = "!output.isStepwiseWarningFlagNull && input.stepwise_method.includes('Backward')",
                        fluidRow(column(
                          width = 12,
                          h3("Model Information - Backward"),
@@ -563,7 +568,7 @@ ui <- navbarPage(
                        )),
                      ),
                      conditionalPanel(
-                       condition = "input.stepwise_method.includes('Both')",
+                       condition = "!output.isStepwiseWarningFlagNull && input.stepwise_method.includes('Both')",
                        fluidRow(column(
                          width = 12,
                          h3("Model Information - Both"),
@@ -1617,12 +1622,24 @@ server <- function(input, output) {
     }
   }
   
+  # To display warning message at the start
+  output$isStepwiseWarningFlagNull <- reactive({
+    is.null(stepwise_warning_flag)
+  })
+  # Required for conditionalPanel's condition to work in the UI
+  outputOptions(output, "isStepwiseWarningFlagNull", suspendWhenHidden = FALSE)
   
   #==============================
   # Observe Stepwise Submit Button Event
   #==============================
   # Function to update the MLR model after the button is click 
   observeEvent(input$StepwiseSubmit, {
+    if (is.null(stepwise_warning_flag)) {
+      stepwise_warning_flag <<- 1
+      output$isStepwiseWarningFlagNull <- reactive({
+        is.null(stepwise_warning_flag)
+      })
+    }
     # Detect the active tab
     active_tab <- input$stepwise_tabs
     if (length(input$stepwise_method) == 0 && active_tab == "stepwise_tab") {
