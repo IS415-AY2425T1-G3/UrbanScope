@@ -24,7 +24,6 @@ pacman::p_load(
 
 rental_sf <- read_rds('data/rds/rental_sf.rds')
 mpsz_sf <- read_rds('data/rds/mpsz_grped_by_town.rds')
-gwr_model <- read_rds('data/rds/gwr_adaptive.rds')
 
 categorical_cols <- c("town", "rent_approval_date", "flat_type", "region")
 
@@ -58,6 +57,11 @@ mlr_model_result <- NULL
 rental_fw_mlr <- NULL
 rental_bw_mlr <- NULL
 rental_bi_mlr <- NULL
+
+# Define global varible for GWR
+gwr_model <- NULL
+filtered_rental_sf <- rental_sf
+
 #========================#
 ###### Shiny UI ######
 #========================#
@@ -499,6 +503,18 @@ ui <- navbarPage(
     #==========================================================
     tabPanel("GWR", sidebarLayout(
       sidebarPanel(
+        selectInput(
+          inputId = "gwr_dataset_filter_variable",
+          label = "Dataset Selection",
+          choices = c("3-Room" = "3-ROOM", "4-Room" = "4-ROOM", "5-Room" = "5-ROOM"),
+          selected = "3-ROOM"
+        ),
+        selectInput(
+          inputId = "gwr_dataset_date_range",
+          label = "Date Range (latest months)",
+          choices = 1:9,
+          selected = 1
+        ),
         selectInput(
           inputId = "gwr_dependent_variable",
           label = "Dependent Variable",
@@ -1131,7 +1147,7 @@ server <- function(input, output) {
       formula = formula,
       data = rental_sf
     )
-    mlr_model_result <<- output # overwrite the gwr_model
+    mlr_model_result <<- output # overwrite
     return(output)
   })
   
@@ -1495,7 +1511,7 @@ server <- function(input, output) {
     
     gwr_adaptive_output <- as.data.frame(input_model$SDF)
     
-    rental_sf_adaptive <- cbind(rental_sf, gwr_adaptive_output)
+    rental_sf_adaptive <- cbind(filtered_rental_sf, gwr_adaptive_output)
     
     # Create the tmap visualization
     tm_shape(mpsz_sf) +
@@ -1511,12 +1527,8 @@ server <- function(input, output) {
   #=======================
   # Based on User input
   #=======================
-  gwrResult <- eventReactive(input$GWRSubmit, {
-    # Disable the button while processing
-    shinyjs::disable("GWRSubmit")  # Disable the button
-    shinyjs::runjs("$('#GWRSubmit').css('background-color', '#6c757d');")  # Change to gray
-    shinyjs::runjs("$('#GWRSubmit').css('border-color', '#6c757d');")  # Change border color
-    shinyjs::runjs("$('#GWRSubmit').text('Processing...');")  # Change text to 'Processing...'
+  
+  run_gwr_model <- function() {
     # Create the formula based on selected variables
     formula_input <- paste(
       input$gwr_dependent_variable,
@@ -1524,10 +1536,18 @@ server <- function(input, output) {
       paste(input$gwr_independent_variables, collapse = " + ")
     )
     formula <- as.formula(formula_input)
+    
+    # Filter the dataset
+    latest_date <- as.Date("2024-09-01")
+    months_back <- as.numeric(input$gwr_dataset_date_range)
+    filtered_rental_sf <<- rental_sf %>% # overwrite the global variable
+      filter(flat_type == input$gwr_dataset_filter_variable) %>%
+      filter(rent_approval_date >= latest_date %m-% months(months_back - 1))
+    
     # Run GWR with user-specified parameters
     output <- gwr.basic(
       formula = formula,
-      data = rental_sf,
+      data = filtered_rental_sf,
       bw = if (as.logical(input$gwr_adaptive)) input$gwr_adaptive_bw else  input$gwr_fixed_bw,
       kernel = input$gwr_kernel,
       adaptive = as.logical(input$gwr_adaptive),
@@ -1535,6 +1555,15 @@ server <- function(input, output) {
     )
     gwr_model <<- output # overwrite the gwr_model
     return(output)
+  }
+  
+  gwrResult <- eventReactive(input$GWRSubmit, {
+    # Disable the button while processing
+    shinyjs::disable("GWRSubmit")  # Disable the button
+    shinyjs::runjs("$('#GWRSubmit').css('background-color', '#6c757d');")  # Change to gray
+    shinyjs::runjs("$('#GWRSubmit').css('border-color', '#6c757d');")  # Change border color
+    shinyjs::runjs("$('#GWRSubmit').text('Processing...');")  # Change text to 'Processing...'
+    return(run_gwr_model())
   })
   
   # Function to update the GWR button and output
@@ -1586,13 +1615,19 @@ server <- function(input, output) {
   # Observe GWR Tab change
   #=======================
   # reload the ooutput everytime
-  observeEvent(input$gwr_tabs, {
-    if (input$gwr_tabs == "gwr_model_info_tab") {
+  observeEvent(c(input$gwr_tabs,input$navbarID), {
+    active_page <- input$navbarID
+    print(paste("Current Page:", active_page,input$gwr_tabs ))
+    if (input$navbarID == "GWR" && input$gwr_tabs == "gwr_model_info_tab") {
+      # load the gwr model, if it is NULL & page is on GWR
+      if (is.null(gwr_model) ) {
+        run_gwr_model()
+      }
       output$gwr_model_info <- renderText({
         result <-  paste(capture.output(gwr_model), collapse = "\n")
         return(result)
       })
-    }else {
+    }else if (input$navbarID == "GWR" && input$gwr_tabs == "gwr_local_r2_tab") {
       output$gwr_local_r2_plot <- renderTmap({
         loadLocalR2Tmap(gwr_model)
       })
