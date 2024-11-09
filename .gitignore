@@ -5,5 +5,8 @@
 .DS_Store
 .quarto
 
+Shiny_app/Shiny_app.Rproj
+Shiny_app/rsconnect/
+
 /.quarto/
 data/

@@ -10,7 +10,7 @@ website:
     - text: "Poster"
       href: "Pages/poster.qmd"
     - text: "Shiny App"
-      href: "https://www.youtube.com"  # add actual link to shiny app after hosted
+      href: "https://is415-ay2425-t1-g3.shinyapps.io/UrbanScope/"  # add actual link to shiny app after hosted
       target: "_blank"
     - text: "User Guide"
       href: "Pages/user_guide.qmd"
