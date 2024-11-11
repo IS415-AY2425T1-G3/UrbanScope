@@ -261,23 +261,32 @@ ui <- navbarPage(
       "Correlation Matrix",
       sidebarLayout(
         sidebarPanel(
-          selectInput(
-            inputId = "cm_method",
-            label = "Method",
-            choices = c(
-              "Circle" = "circle",
-              "Square" = "square",
-              "Ellipse" = "ellipse",
-              "Number" = "number",
-              "Pie" = "pie",
-              "Shade" = "shade",
-              "Color" = "color"
-            ),
-            selected = "circle"
+          radioButtons(
+            inputId = "cm_plot_type",
+            label = "Correlation Plot Type",
+            choices = c("corrplot" = "corrplot", "ggcorrmat" = "ggcorrmat"),
+            selected = "corrplot"
+          ),
+          conditionalPanel(
+            condition = "input.cm_plot_type == 'corrplot'",
+            selectInput(
+              inputId = "cm_method",
+              label = "Method",
+              choices = c(
+                "Circle" = "circle",
+                "Square" = "square",
+                "Ellipse" = "ellipse",
+                "Number" = "number",
+                "Pie" = "pie",
+                "Shade" = "shade",
+                "Color" = "color"
+              ),
+              selected = "circle"
+            )
           ),
           selectInput(
             inputId = "cm_type",
-            label = "Type",
+            label = "Matrix Type",
             choices = c(
               "Full" = "full",
               "Upper" = "upper",
@@ -285,17 +294,20 @@ ui <- navbarPage(
             ),
             selected = "full"
           ),
-          selectInput(
-            inputId = "cm_order",
-            label = "Order",
-            choices = c(
-              "Original" = "original",
-              "Angular Order of the Eigenvectors Order (AOE)" = "AOE",
-              "First Principal Component Order (FPC)" = "FPC",
-              "Hierarchical Clustering Order" = "hclust",
-              "Alphabetical Order" = "alphabet"
-            ),
-            selected = "original"
+          conditionalPanel(
+            condition = "input.cm_plot_type == 'corrplot'",
+            selectInput(
+              inputId = "cm_order",
+              label = "Order",
+              choices = c(
+                "Original" = "original",
+                "Angular Order of the Eigenvectors Order (AOE)" = "AOE",
+                "First Principal Component Order (FPC)" = "FPC",
+                "Hierarchical Clustering Order" = "hclust",
+                "Alphabetical Order" = "alphabet"
+              ),
+              selected = "original"
+            )
           ),
           conditionalPanel(
             condition = "input.cm_order == 'hclust'",
@@ -1387,9 +1399,18 @@ server <- function(input, output) {
     
   })
   
+  ggcorrmatMatrixResults <- reactive({
+    ggcorrmat(independent_columns(), matrix.type = input$cm_type)
+  })
+  
   # Render the correlation matrix plot in the main panel
   output$correlationMatrixPlot <- renderPlot({
-    correlationMatrixResults()
+    type <- input$cm_plot_type
+    if(type == "corrplot") {
+      correlationMatrixResults()
+    } else {
+      ggcorrmatMatrixResults()
+    }
   })
   
   #==========================================================
