@@ -18,6 +18,10 @@ website:
       href: "Pages/data_source.qmd"
       
     right:
+      - text: "Meeting Minutes"
+        menu:
+        - text: 'Consultation 17 Oct'
+          href: "Pages/Meeting Minutes/Consultation_17Oct.qmd" 
       - about.qmd
 
 format:

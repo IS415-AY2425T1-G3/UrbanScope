@@ -1,5 +1,12 @@
 [
   {
+    "objectID": "Pages/Meeting Minutes/Consultation_17Oct.html",
+    "href": "Pages/Meeting Minutes/Consultation_17Oct.html",
+    "title": "Consultation Minutes with Prof Kam",
+    "section": "",
+    "text": "Date: 17 October, 2024\nTime: 1:30 PM - 2:30 PM\nLocation: SCIS1 Meeting Room 4-1\nAttendee(s): Prof Kam, Brian, Mingwei, Georgia\n\nDiscussion Points\n\n\nProf Kam provided some advice to us upon reviewing our rental dataset.\n- Data preparation would be extensive since we do not have much fields in our current dataset, that would mean that we will need to take extra steps to gather useful information to further support our\n- Besides commuting, can do things like proximity to childcare and primary sch, convenience (near to supermarket?) Can have about 5 to 6 explanatory variables\n- To derive the geolocations that are essential for our project, we would need to combine both the block numbers and street names to get the location (coordinates)\n\nWe can use Megan’s as a reference on how we could do it (geocoding)\n\nRegarding additional explanatory fields we can use for rental\n- Floor area is very closely related to rental price\n- Age of building, high floor, low floor\nWhat to focus on?\n- How to build the application and expose the functions to the users so that they can configure and get the results/visualisations they need according to the parameters they want to set\n- For eg, allow the user to select a specific housing type\n- It is not necessary to go for too many models, the emphasis should be on understanding the model and being aware of the options you have to customise/configure it\nDistributing of work\n- Data exploration, GWR, Predictive\nShould we do the analysis for both hdb and private estates?\n- Do either but not both\n- If we are looking to do private housing, we can go to URA for the rental database and access through SMU library’s platform which has a more extensive dataset\n- A challenge is that the dataset cannot be downloaded all at once and we can only download part of it at a time"
+  },
+  {
     "objectID": "Proposal/proposal.html",
     "href": "Proposal/proposal.html",
     "title": "Project Proposal",
@@ -28,11 +35,11 @@
     "text": "5.3 Data Table"
   },
   {
-    "objectID": "Pages/data_source.html",
-    "href": "Pages/data_source.html",
-    "title": "Data Sources",
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "UrbanScope",
     "section": "",
-    "text": "Below are the data sources utilised in this project:\n\n\n\nDatasets\nSource\n\n\n\n\nSingapore Rental Flat Prices (Jan-17 to Sep-24)\ndata.gov.sg\n\n\nMaster Plan 2014 Subzone Boundary (Web)\ndata.gov.sg\n\n\nHawker Centres Dataset\ndata.gov.sg\n\n\nKindergarten, Childcare, Primary School Dataset\nOneMap API\n\n\nBus Stops Location, MRT/ LRT Locations\nLTA Data Mall\n\n\nShopping Malls Coordinates\nThrough Wikipedia and webscraping with the coordinates retrieved through OneMap API"
+    "text": "Welcome to UrbanScope’s Rental Explorer!\nBuilt with the power of Quarto, hosted on Netlify, and driven by R programming, our interactive tool lets you explore the ever-changing landscape of Singapore’s rental market. Our cutting-edge tool combines the power of Geographically Weighted Regression (GWR) with interactive visuals, allowing you to explore how proximity to MRT stations, bus stops, and other key factors influence rental prices.\n\nWhat Can You Do Here?\n\nInteractive Experience: Adjust inputs and watch the rental map of Singapore come alive with instant insights.\nExplore Key Trends: Dive deep into the impact of transportation access, neighborhood vibes, and property features on rental prices.\nGet Accurate Predictions: Enter any location and let our predictive model forecast the likely rental price based on surrounding amenities and transport links.\n\n\nReady to make smarter rental decisions? Let’s get started!\nUrbanScope – Helping you navigate Singapore’s rental market like a pro."
   },
   {
     "objectID": "about.html",
@@ -42,10 +49,10 @@
     "text": "Meet UrbanScope: Mapping Your Next Move\nUrbanScope isn’t just another data project—it’s your personal guide to finding the perfect rental flat in Singapore. Born from our passion for solving real-world problems through data, we created this tool to help you make more informed rental choices. Why? Because we know that where you live should be more than just an address—it should be a strategic decision.\n\nWho We Are:\n\nPan Ming Wei\nGeorgia Ng\nBrian Lim\n\n\n\nWhy We Built This:\nIn light of recent MRT disruptions, we saw a need to understand how public transport accessibility impacts housing prices. With Singapore’s rental market becoming more competitive, we wanted to create a tool that helps users make informed decisions by understanding the true value of location.\nWhether you’re searching for a home near your office or looking for the best deal near an MRT station, UrbanScope helps you navigate the rental market with confidence.\n\nUrbanScope: Making sense of Singapore’s rental scene, one flat at a time."
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "UrbanScope",
+    "objectID": "Pages/data_source.html",
+    "href": "Pages/data_source.html",
+    "title": "Data Sources",
     "section": "",
-    "text": "Welcome to UrbanScope’s Rental Explorer!\nBuilt with the power of Quarto, hosted on Netlify, and driven by R programming, our interactive tool lets you explore the ever-changing landscape of Singapore’s rental market. Our cutting-edge tool combines the power of Geographically Weighted Regression (GWR) with interactive visuals, allowing you to explore how proximity to MRT stations, bus stops, and other key factors influence rental prices.\n\nWhat Can You Do Here?\n\nInteractive Experience: Adjust inputs and watch the rental map of Singapore come alive with instant insights.\nExplore Key Trends: Dive deep into the impact of transportation access, neighborhood vibes, and property features on rental prices.\nGet Accurate Predictions: Enter any location and let our predictive model forecast the likely rental price based on surrounding amenities and transport links.\n\n\nReady to make smarter rental decisions? Let’s get started!\nUrbanScope – Helping you navigate Singapore’s rental market like a pro."
+    "text": "Below are the data sources utilised in this project:\n\n\n\nDatasets\nSource\n\n\n\n\nSingapore Rental Flat Prices (Jan-17 to Sep-24)\ndata.gov.sg\n\n\nMaster Plan 2014 Subzone Boundary (Web)\ndata.gov.sg\n\n\nHawker Centres Dataset\ndata.gov.sg\n\n\nKindergarten, Childcare, Primary School Dataset\nOneMap API\n\n\nBus Stops Location, MRT/ LRT Locations\nLTA Data Mall\n\n\nShopping Malls Coordinates\nThrough Wikipedia and webscraping with the coordinates retrieved through OneMap API"
   }
 ]
