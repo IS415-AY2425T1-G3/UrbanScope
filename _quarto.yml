@@ -20,8 +20,13 @@ website:
     right:
       - text: "Meeting Minutes"
         menu:
+        - text: 'Meeting 8 Oct'
+          href: "Pages/Meeting Minutes/Meeting_8Oct.qmd" 
         - text: 'Consultation 17 Oct'
-          href: "Pages/Meeting Minutes/Consultation_17Oct.qmd" 
+          href: "Pages/Meeting Minutes/Consultation_17Oct.qmd"
+        - text: 'Meeting 4 Nov'
+          href: "Pages/Meeting Minutes/Meeting_4Nov.qmd" 
+          
       - about.qmd
 
 format:

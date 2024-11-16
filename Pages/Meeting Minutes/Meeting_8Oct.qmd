@@ -1,0 +1,30 @@
+---
+title: "First Meeting Discussion"
+---
+
+| **Date**: 8 October, 2024
+| **Time**: 10:30 AM - 2:30 PM
+| **Location**: SCIS2 GSR2-4
+| **Attendee(s)**: Brian, Mingwei, Georgia
+
+# Discussion Points
+
+**Datasets and Possible Topics**
+
+-   Discussed dengue fever as a potential topic but found the dataset unsuitable for analysis.
+
+-   Identified transactional data for HDB, condo, and landed property transactions (last updated in 2022).
+
+-   Includes coordinate data for spatial analysis.
+
+-   Limitation: Only covers properties that were sold or bought, not all properties.
+
+-   Decided against using the HDB Sales dataset due to its similarity to previous years' projects.
+
+-   Brought up private property as a potential avenue for exploration.
+
+**Final Decision**
+
+-   Chose to focus on rental datasets as the topic.
+
+-   Found housing and its proximity to transport relevant, especially in light of recent news about frequent MRT breakdowns.

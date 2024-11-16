@@ -1,0 +1,30 @@
+---
+title: "Shiny App Meeting Discussion"
+---
+
+| **Date**: 4 November, 2024
+| **Time**: 12:30 PM - 2:30 PM
+| **Location**: SCIS1 GSR2-3
+| **Attendee(s)**: Brian, Mingwei, Georgia
+
+# Discussion Points
+
+**Areas of Improvement**
+
+-   Locations of Interest - Ensure feedback is provided to users when the map does not render due to invalid or missing data for the selected parameter set
+
+-   Might have to add additional stuff for regression in accordance to what the prof taught in class
+
+**Concerns Brought Up**
+
+-   Predictive model is taking an unreasonable time to process and compute
+
+**Possible Solutions**
+
+-   Might need to further scope down to reduce dataset
+
+-   Maybe split dataset by the flat types and render separately
+
+**Additional Things We Need To Do**
+
+-   Host shiny app

@@ -11,42 +11,38 @@ title: "Consultation Minutes with Prof Kam"
 
 ------------------------------------------------------------------------
 
-<div>
-
 **Prof Kam provided some advice to us upon reviewing our rental dataset.**
 
-\- Data preparation would be extensive since we do not have much fields in our current dataset, that would mean that we will need to take extra steps to gather useful information to further support our
+-   Data preparation would be extensive since we do not have much fields in our current dataset, that would mean that we will need to take extra steps to gather useful information to further support our
 
-\- Besides commuting, can do things like proximity to childcare and primary sch, convenience (near to supermarket?) Can have about 5 to 6 explanatory variables
+-   Besides commuting, can do things like proximity to childcare and primary sch, convenience (near to supermarket?) Can have about 5 to 6 explanatory variables
 
-\- To derive the geolocations that are essential for our project, we would need to combine both the block numbers and street names to get the location (coordinates)
+-   To derive the geolocations that are essential for our project, we would need to combine both the block numbers and street names to get the location (coordinates)
 
- - We can use Megan's as a reference on how we could do it (geocoding)
+-   We can use Megan's as a reference on how we could do it (geocoding)
 
 **Regarding additional explanatory fields we can use for rental**
 
-\- Floor area is very closely related to rental price
+-   Floor area is very closely related to rental price
 
-\- Age of building, high floor, low floor
+-   Age of building, high floor, low floor
 
 **What to focus on?**
 
-\- How to build the application and expose the functions to the users so that they can configure and get the results/visualisations they need according to the parameters they want to set
+-   How to build the application and expose the functions to the users so that they can configure and get the results/visualisations they need according to the parameters they want to set
 
-\- For eg, allow the user to select a specific housing type
+-   For eg, allow the user to select a specific housing type
 
-\- It is not necessary to go for too many models, the emphasis should be on understanding the model and being aware of the options you have to customise/configure it
+-   It is not necessary to go for too many models, the emphasis should be on understanding the model and being aware of the options you have to customise/configure it
 
 **Distributing of work**
 
-\- Data exploration, GWR, Predictive
+-   Data exploration, GWR, Predictive
 
 **Should we do the analysis for both hdb and private estates?**
 
-\- Do either but not both
+-   Do either but not both
 
-\- If we are looking to do private housing, we can go to URA for the rental database and access through SMU library’s platform which has a more extensive dataset
+-   If we are looking to do private housing, we can go to URA for the rental database and access through SMU library’s platform which has a more extensive dataset
 
-\- A challenge is that the dataset cannot be downloaded all at once and we can only download part of it at a time	
-
-</div>
+-   A challenge is that the dataset cannot be downloaded all at once and we can only download part of it at a time
