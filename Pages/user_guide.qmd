@@ -1,1 +1,10 @@
+## Introduction
 
+Welcome to the User Guide for UrbanScope, a Shiny Application designed to explore, model, and predict HDB rental prices in Singapore. This guide provides a comprehensive overview of the application's features, including data exploration, explanatory modeling, and predictive modeling tools. UrbanScope empowers users to generate insightful visualizations, build analytical models, and predict rental prices with a user-friendly interface tailored for both general and advanced users.
+
+For convenience, you can access the Shiny application for UrbanScope [here](%22https://is415-ay2425-t1-g3.shinyapps.io/UrbanScope/%22) Below, you will find the complete user guide embedded directly within this page for reference.
+
+## Embedded User Guide
+
+<embed src="415 User Guide.pdf" width="100%" height="600px" type="application/pdf">
+If the embedded view doesn’t load, [download the user guide here](415 User Guide.pdf).

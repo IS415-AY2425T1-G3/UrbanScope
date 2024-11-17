@@ -1,19 +1,5 @@
 [
   {
-    "objectID": "Pages/Meeting Minutes/Consultation_17Oct.html",
-    "href": "Pages/Meeting Minutes/Consultation_17Oct.html",
-    "title": "Consultation Minutes with Prof Kam",
-    "section": "",
-    "text": "Date: 17 October, 2024\nTime: 1:30 PM - 2:30 PM\nLocation: SCIS1 Meeting Room 4-1\nAttendee(s): Prof Kam, Brian, Mingwei, Georgia\n\nDiscussion Points\n\nProf Kam provided some advice to us upon reviewing our rental dataset.\n\nData preparation would be extensive since we do not have much fields in our current dataset, that would mean that we will need to take extra steps to gather useful information to further support our\nBesides commuting, can do things like proximity to childcare and primary sch, convenience (near to supermarket?) Can have about 5 to 6 explanatory variables\nTo derive the geolocations that are essential for our project, we would need to combine both the block numbers and street names to get the location (coordinates)\nWe can use Megan’s as a reference on how we could do it (geocoding)\n\nRegarding additional explanatory fields we can use for rental\n\nFloor area is very closely related to rental price\nAge of building, high floor, low floor\n\nWhat to focus on?\n\nHow to build the application and expose the functions to the users so that they can configure and get the results/visualisations they need according to the parameters they want to set\nFor eg, allow the user to select a specific housing type\nIt is not necessary to go for too many models, the emphasis should be on understanding the model and being aware of the options you have to customise/configure it\n\nDistributing of work\n\nData exploration, GWR, Predictive\n\nShould we do the analysis for both hdb and private estates?\n\nDo either but not both\nIf we are looking to do private housing, we can go to URA for the rental database and access through SMU library’s platform which has a more extensive dataset\nA challenge is that the dataset cannot be downloaded all at once and we can only download part of it at a time"
-  },
-  {
-    "objectID": "Pages/Meeting Minutes/Meeting_8Oct.html",
-    "href": "Pages/Meeting Minutes/Meeting_8Oct.html",
-    "title": "First Meeting Discussion",
-    "section": "",
-    "text": "Date: 8 October, 2024\nTime: 10:30 AM - 2:30 PM\nLocation: SCIS2 GSR2-4\nAttendee(s): Brian, Mingwei, Georgia\n\nDiscussion Points\nDatasets and Possible Topics\n\nDiscussed dengue fever as a potential topic but found the dataset unsuitable for analysis.\nIdentified transactional data for HDB, condo, and landed property transactions (last updated in 2022).\nIncludes coordinate data for spatial analysis.\nLimitation: Only covers properties that were sold or bought, not all properties.\nDecided against using the HDB Sales dataset due to its similarity to previous years’ projects.\nBrought up private property as a potential avenue for exploration.\n\nFinal Decision\n\nChose to focus on rental datasets as the topic.\nFound housing and its proximity to transport relevant, especially in light of recent news about frequent MRT breakdowns."
-  },
-  {
     "objectID": "Proposal/proposal.html",
     "href": "Proposal/proposal.html",
     "title": "Project Proposal",
@@ -42,18 +28,11 @@
     "text": "5.3 Data Table"
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "UrbanScope",
+    "objectID": "Pages/Meeting Minutes/Meeting_4Nov.html",
+    "href": "Pages/Meeting Minutes/Meeting_4Nov.html",
+    "title": "Shiny App Meeting Discussion",
     "section": "",
-    "text": "Welcome to UrbanScope’s Rental Explorer!\nBuilt with the power of Quarto, hosted on Netlify, and driven by R programming, our interactive tool lets you explore the ever-changing landscape of Singapore’s rental market. Our cutting-edge tool combines the power of Geographically Weighted Regression (GWR) with interactive visuals, allowing you to explore how proximity to MRT stations, bus stops, and other key factors influence rental prices.\n\nWhat Can You Do Here?\n\nInteractive Experience: Adjust inputs and watch the rental map of Singapore come alive with instant insights.\nExplore Key Trends: Dive deep into the impact of transportation access, neighborhood vibes, and property features on rental prices.\nGet Accurate Predictions: Enter any location and let our predictive model forecast the likely rental price based on surrounding amenities and transport links.\n\n\nReady to make smarter rental decisions? Let’s get started!\nUrbanScope – Helping you navigate Singapore’s rental market like a pro."
-  },
-  {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
-    "section": "",
-    "text": "Meet UrbanScope: Mapping Your Next Move\nUrbanScope isn’t just another data project—it’s your personal guide to finding the perfect rental flat in Singapore. Born from our passion for solving real-world problems through data, we created this tool to help you make more informed rental choices. Why? Because we know that where you live should be more than just an address—it should be a strategic decision.\n\nWho We Are:\n\nPan Ming Wei\nGeorgia Ng\nBrian Lim\n\n\n\nWhy We Built This:\nIn light of recent MRT disruptions, we saw a need to understand how public transport accessibility impacts housing prices. With Singapore’s rental market becoming more competitive, we wanted to create a tool that helps users make informed decisions by understanding the true value of location.\nWhether you’re searching for a home near your office or looking for the best deal near an MRT station, UrbanScope helps you navigate the rental market with confidence.\n\nUrbanScope: Making sense of Singapore’s rental scene, one flat at a time."
+    "text": "Date: 4 November, 2024\nTime: 12:30 PM - 2:30 PM\nLocation: SCIS1 GSR2-3\nAttendee(s): Brian, Mingwei, Georgia\n\nDiscussion Points\nAreas of Improvement\n\nLocations of Interest - Ensure feedback is provided to users when the map does not render due to invalid or missing data for the selected parameter set\nMight have to add additional stuff for regression in accordance to what the prof taught in class\n\nConcerns Brought Up\n\nPredictive model is taking an unreasonable time to process and compute\n\nPossible Solutions\n\nMight need to further scope down to reduce dataset\nMaybe split dataset by the flat types and render separately\n\nAdditional Things We Need To Do\n\nHost shiny app"
   },
   {
     "objectID": "Pages/data_source.html",
@@ -63,10 +42,52 @@
     "text": "Below are the data sources utilised in this project:\n\n\n\nDatasets\nSource\n\n\n\n\nSingapore Rental Flat Prices (Jan-17 to Sep-24)\ndata.gov.sg\n\n\nMaster Plan 2014 Subzone Boundary (Web)\ndata.gov.sg\n\n\nHawker Centres Dataset\ndata.gov.sg\n\n\nKindergarten, Childcare, Primary School Dataset\nOneMap API\n\n\nBus Stops Location, MRT/ LRT Locations\nLTA Data Mall\n\n\nShopping Malls Coordinates\nThrough Wikipedia and webscraping with the coordinates retrieved through OneMap API"
   },
   {
-    "objectID": "Pages/Meeting Minutes/Meeting_4Nov.html",
-    "href": "Pages/Meeting Minutes/Meeting_4Nov.html",
-    "title": "Shiny App Meeting Discussion",
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
     "section": "",
-    "text": "Date: 4 November, 2024\nTime: 12:30 PM - 2:30 PM\nLocation: SCIS1 GSR2-3\nAttendee(s): Brian, Mingwei, Georgia\n\nDiscussion Points\nAreas of Improvement\n\nLocations of Interest - Ensure feedback is provided to users when the map does not render due to invalid or missing data for the selected parameter set\nMight have to add additional stuff for regression in accordance to what the prof taught in class\n\nConcerns Brought Up\n\nPredictive model is taking an unreasonable time to process and compute\n\nPossible Solutions\n\nMight need to further scope down to reduce dataset\nMaybe split dataset by the flat types and render separately\n\nAdditional Things We Need To Do\n\nHost shiny app"
+    "text": "Meet UrbanScope: Mapping Your Next Move\nUrbanScope isn’t just another data project—it’s your personal guide to finding the perfect rental flat in Singapore. Born from our passion for solving real-world problems through data, we created this tool to help you make more informed rental choices. Why? Because we know that where you live should be more than just an address—it should be a strategic decision.\n\nWho We Are:\n\nPan Ming Wei\nGeorgia Ng\nBrian Lim\n\n\n\nWhy We Built This:\nIn light of recent MRT disruptions, we saw a need to understand how public transport accessibility impacts housing prices. With Singapore’s rental market becoming more competitive, we wanted to create a tool that helps users make informed decisions by understanding the true value of location.\nWhether you’re searching for a home near your office or looking for the best deal near an MRT station, UrbanScope helps you navigate the rental market with confidence.\n\nUrbanScope: Making sense of Singapore’s rental scene, one flat at a time."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "UrbanScope",
+    "section": "",
+    "text": "Welcome to UrbanScope’s Rental Explorer!\nBuilt with the power of Quarto, hosted on Netlify, and driven by R programming, our interactive tool lets you explore the ever-changing landscape of Singapore’s rental market. Our cutting-edge tool combines the power of Geographically Weighted Regression (GWR) with interactive visuals, allowing you to explore how proximity to MRT stations, bus stops, and other key factors influence rental prices.\n\nWhat Can You Do Here?\n\nInteractive Experience: Adjust inputs and watch the rental map of Singapore come alive with instant insights.\nExplore Key Trends: Dive deep into the impact of transportation access, neighborhood vibes, and property features on rental prices.\nGet Accurate Predictions: Enter any location and let our predictive model forecast the likely rental price based on surrounding amenities and transport links.\n\n\nReady to make smarter rental decisions? Let’s get started!\nUrbanScope – Helping you navigate Singapore’s rental market like a pro."
+  },
+  {
+    "objectID": "Pages/Meeting Minutes/Consultation_17Oct.html",
+    "href": "Pages/Meeting Minutes/Consultation_17Oct.html",
+    "title": "Consultation Minutes with Prof Kam",
+    "section": "",
+    "text": "Date: 17 October, 2024\nTime: 1:30 PM - 2:30 PM\nLocation: SCIS1 Meeting Room 4-1\nAttendee(s): Prof Kam, Brian, Mingwei, Georgia\n\nDiscussion Points\n\nProf Kam provided some advice to us upon reviewing our rental dataset.\n\nData preparation would be extensive since we do not have much fields in our current dataset, that would mean that we will need to take extra steps to gather useful information to further support our\nBesides commuting, can do things like proximity to childcare and primary sch, convenience (near to supermarket?) Can have about 5 to 6 explanatory variables\nTo derive the geolocations that are essential for our project, we would need to combine both the block numbers and street names to get the location (coordinates)\nWe can use Megan’s as a reference on how we could do it (geocoding)\n\nRegarding additional explanatory fields we can use for rental\n\nFloor area is very closely related to rental price\nAge of building, high floor, low floor\n\nWhat to focus on?\n\nHow to build the application and expose the functions to the users so that they can configure and get the results/visualisations they need according to the parameters they want to set\nFor eg, allow the user to select a specific housing type\nIt is not necessary to go for too many models, the emphasis should be on understanding the model and being aware of the options you have to customise/configure it\n\nDistributing of work\n\nData exploration, GWR, Predictive\n\nShould we do the analysis for both hdb and private estates?\n\nDo either but not both\nIf we are looking to do private housing, we can go to URA for the rental database and access through SMU library’s platform which has a more extensive dataset\nA challenge is that the dataset cannot be downloaded all at once and we can only download part of it at a time"
+  },
+  {
+    "objectID": "Pages/Meeting Minutes/Meeting_8Oct.html",
+    "href": "Pages/Meeting Minutes/Meeting_8Oct.html",
+    "title": "First Meeting Discussion",
+    "section": "",
+    "text": "Date: 8 October, 2024\nTime: 10:30 AM - 2:30 PM\nLocation: SCIS2 GSR2-4\nAttendee(s): Brian, Mingwei, Georgia\n\nDiscussion Points\nDatasets and Possible Topics\n\nDiscussed dengue fever as a potential topic but found the dataset unsuitable for analysis.\nIdentified transactional data for HDB, condo, and landed property transactions (last updated in 2022).\nIncludes coordinate data for spatial analysis.\nLimitation: Only covers properties that were sold or bought, not all properties.\nDecided against using the HDB Sales dataset due to its similarity to previous years’ projects.\nBrought up private property as a potential avenue for exploration.\n\nFinal Decision\n\nChose to focus on rental datasets as the topic.\nFound housing and its proximity to transport relevant, especially in light of recent news about frequent MRT breakdowns."
+  },
+  {
+    "objectID": "Pages/user_guide.html",
+    "href": "Pages/user_guide.html",
+    "title": "UrbanScope",
+    "section": "",
+    "text": "Welcome to the User Guide for UrbanScope, a Shiny Application designed to explore, model, and predict HDB rental prices in Singapore. This guide provides a comprehensive overview of the application’s features, including data exploration, explanatory modeling, and predictive modeling tools. UrbanScope empowers users to generate insightful visualizations, build analytical models, and predict rental prices with a user-friendly interface tailored for both general and advanced users.\nFor convenience, you can access the Shiny application for UrbanScope here Below, you will find the complete user guide embedded directly within this page for reference."
+  },
+  {
+    "objectID": "Pages/user_guide.html#introduction",
+    "href": "Pages/user_guide.html#introduction",
+    "title": "UrbanScope",
+    "section": "",
+    "text": "Welcome to the User Guide for UrbanScope, a Shiny Application designed to explore, model, and predict HDB rental prices in Singapore. This guide provides a comprehensive overview of the application’s features, including data exploration, explanatory modeling, and predictive modeling tools. UrbanScope empowers users to generate insightful visualizations, build analytical models, and predict rental prices with a user-friendly interface tailored for both general and advanced users.\nFor convenience, you can access the Shiny application for UrbanScope here Below, you will find the complete user guide embedded directly within this page for reference."
+  },
+  {
+    "objectID": "Pages/user_guide.html#embedded-user-guide",
+    "href": "Pages/user_guide.html#embedded-user-guide",
+    "title": "UrbanScope",
+    "section": "Embedded User Guide",
+    "text": "Embedded User Guide\n\nIf the embedded view doesn’t load, download the user guide here."
   }
 ]
